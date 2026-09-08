@@ -33,6 +33,32 @@ The committed `frontend/public/_redirects` file preserves client-side routes. Do
 
 ## FastAPI backend
 
+## Cloudflare Workers migration
+
+The `miriaxone_workers_migration` branch adds a TypeScript Worker at
+`workers/src/index.ts`. During migration, the Worker owns the public API
+boundary and proxies `/api/*` to the existing FastAPI service. This keeps the
+React client and public domain stable while routes are migrated incrementally.
+
+Deploy it with:
+
+```powershell
+npx wrangler deploy --config wrangler.toml
+```
+
+Configure these Worker variables:
+
+```text
+LEGACY_API_URL=https://api.miriaxone.com
+FRONTEND_URL=https://miriaxone.com
+```
+
+The Worker currently does not connect to MongoDB or replace FastAPI. Do not
+remove the FastAPI service until authentication, checkout, uploads, admin,
+tracking, and all public catalog routes have been ported and tested.
+
+## FastAPI backend
+
 Deploy `backend/` with `backend/Dockerfile`, or use any Python 3.12 runtime with:
 
 ```text
