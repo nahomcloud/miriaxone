@@ -2,6 +2,10 @@
 
 ## Cloudflare Pages frontend
 
+The `miriaxone_cloudflare` branch is prepared for Cloudflare Pages. It keeps the
+existing React application and does not move the FastAPI/MongoDB backend into a
+Worker.
+
 Use the repository root as the Pages project directory:
 
 - Framework preset: `Vite`
@@ -9,6 +13,21 @@ Use the repository root as the Pages project directory:
 - Build output directory: `frontend/dist`
 - Node version: `20`
 - `VITE_API_URL`: the public API origin, or `/api` when a reverse proxy is configured
+
+Recommended Pages settings for this branch:
+
+```text
+Production branch: miriaxone_cloudflare
+Root directory: /
+Build command: npm run build
+Build output directory: frontend/dist
+Environment variable: VITE_API_URL=https://<api-domain>
+```
+
+The root `package.json` delegates the build to the frontend workspace. The
+frontend `public/_redirects` file preserves client-side routes and `public/_headers`
+adds baseline response security headers. Do not put database credentials or
+`JWT_SECRET` in Pages variables.
 
 The committed `frontend/public/_redirects` file preserves client-side routes. Do not upload `.env` files or put private API values in `VITE_*` variables.
 
