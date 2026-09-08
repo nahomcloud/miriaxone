@@ -1,0 +1,96 @@
+"""Create schema-compatible orders using server catalog prices and private uploads."""
+import json
+import math
+import secrets
+from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
+from pathlib import Path
+from bson import ObjectId
+from fastapi import Depends, HTTPException, Request
+from fastapi.responses import FileResponse
+from starlette.datastructures import UploadFile
+from backend.network import require_available
+
+STORAGE = Path(__file__).resolve().parent / "order_files"
+
+
+def install(app, database, optional_user, admin_user):
+    @app.post("/site/checkout")
+    async def checkout(request: Request, db=Depends(database), user=Depends(optional_user)):
+        form = await request.form()
+        fields = {key: value for key, value in form.items() if isinstance(value, str) and key in {
+            "name", "email", "phone", "fromCountry", "toCountry", "shippingType", "containerId", "productId", "weight", "itemsCount", "description", "serviceKey"}}
+        for key in ("name", "email", "phone", "fromCountry", "toCountry", "shippingType", "containerId", "productId", "weight", "itemsCount", "description"):
+            if not fields.get(key, "").strip():
+                raise HTTPException(422, f"{key} is required")
+        try:
+            shipping_id, container_id, product_id = [ObjectId(fields[key]) for key in ("shippingType", "containerId", "productId")]
+            weight, count = float(fields["weight"]), int(fields["itemsCount"])
+            if not math.isfinite(weight) or weight <= 0 or count <= 0:
+                raise ValueError()
+        except Exception:
+            raise HTTPException(422, "Invalid shipping selections, weight, or item count")
+        for key in ("fromCountry", "toCountry"):
+            fields[key] = fields[key].upper()
+            if not await db.countries.find_one({"isoCode": fields[key], "isActive": 1, "archived": {"$ne": True}}):
+                raise HTTPException(422, "Selected country is not available for shipping")
+        fields['serviceKey'] = fields.get('serviceKey', 'container')
+        await require_available(db, fields['fromCountry'], fields['toCountry'], fields['serviceKey'])
+        container = await db.containers.find_one({"_id": container_id, "countryCode": fields["toCountry"], "shippingType": shipping_id, "isActive": 1, "archived": {"$ne": True}})
+        product = await db.products.find_one({"_id": product_id, "isActive": 1, "archived": {"$ne": True}})
+        if not container or not product:
+            raise HTTPException(422, "Selected product or container is no longer available")
+        taxes = [item async for item in db.taxRates.find({"countryCode": fields["toCountry"], "archived": {"$ne": True}})]
+        requirements = [item async for item in db.countryDocuments.find({"countryCode": fields["toCountry"], "shippingType": shipping_id, "archived": {"$ne": True}})]
+        subtotal = sum((Decimal(str(container.get(key, 0))) for key in ("price", "serviceCharge", "otherCharge")), Decimal(str(product["price"])))
+        tax = sum((subtotal * Decimal(str(item["rate"])) / 100 for item in taxes), Decimal(0))
+        total = (subtotal + tax).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        # Read and validate all required documents before creating files or the order.
+        uploads = []
+        total_bytes = 0
+        for index, requirement in enumerate(requirements):
+            upload = form.get(f"document_{index}")
+            if not isinstance(upload, UploadFile):
+                raise HTTPException(422, f"Upload required: {requirement['name']}")
+            content = await upload.read(5 * 1024 * 1024 + 1)
+            total_bytes += len(content)
+            if not content or len(content) > 5 * 1024 * 1024 or total_bytes > 20 * 1024 * 1024:
+                raise HTTPException(413, "Documents must be at most 5 MB each and 20 MB combined")
+            extension = 'pdf' if content.startswith(b'%PDF-') else 'png' if content.startswith(b'\x89PNG\r\n\x1a\n') else 'jpg' if content.startswith(b'\xff\xd8\xff') else 'webp' if content.startswith(b'RIFF') and content[8:12] == b'WEBP' else None
+            if not extension:
+                raise HTTPException(422, "Documents must be PDF, PNG, JPEG, or WebP files")
+            uploads.append((str(requirement['_id']), requirement['name'], content, extension))
+        now = datetime.now(timezone.utc)
+        order = {"name": fields["name"], "price": float(total), "status": "pending", "isPaid": 0, "txnId": "",
+                 "createdAt": now, "updatedAt": now, "files": {},
+                 "cart": {"formData": fields, "cartData": {"container": container, "cartItems": [product], "taxes": taxes}, "total": float(total)}}
+        if user:
+            order['userId'] = str(user['_id'])
+        written = []
+        try:
+            for key, name, content, extension in uploads:
+                STORAGE.mkdir(exist_ok=True)
+                storage_key = secrets.token_hex(24) + '.' + extension
+                path = STORAGE / storage_key
+                path.write_bytes(content)
+                written.append(path)
+                order['files'][key] = [{"name": name, "storageKey": storage_key, "size": len(content)}]
+            result = await db.orders.insert_one(order)
+        except Exception:
+            for path in written:
+                path.unlink(missing_ok=True)
+            raise
+        return {"model": {"_id": str(result.inserted_id)}, "total": float(total), "message": "Order created; payment pending"}
+
+    @app.get('/admin/order/{item_id}/documents/{storage_key}', dependencies=[Depends(admin_user)])
+    async def document(item_id: str, storage_key: str, db=Depends(database)):
+        import re
+        if not ObjectId.is_valid(item_id) or not re.fullmatch(r'[a-f0-9]{48}\.(pdf|png|jpg|webp)', storage_key):
+            raise HTTPException(404, "Document not found")
+        order = await db.orders.find_one({'_id': ObjectId(item_id)})
+        if not order or not any(item.get('storageKey') == storage_key for items in order.get('files', {}).values() if isinstance(items, list) for item in items if isinstance(item, dict)):
+            raise HTTPException(404, "Document not found")
+        path = STORAGE / storage_key
+        if not path.is_file():
+            raise HTTPException(404, "Document is unavailable on this API server")
+        return FileResponse(path, filename=storage_key, media_type='application/octet-stream', headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
