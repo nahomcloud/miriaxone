@@ -46,7 +46,7 @@ afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 function mount(resource:string){render(<MemoryRouter initialEntries={['/admin?section='+resource]} future={{v7_startTransition:true,v7_relativeSplatPath:true}}><AuthProvider><AdminPanel/></AuthProvider></MemoryRouter>)}
 
 describe('Forms for all admin sections',()=>{
-  it.each(adminSections)('$label opens and saves a structured form',async section=>{
+  it.each(adminSections.filter(section=>section.fields.length))('$label opens and saves a structured form',async section=>{
     mount(section.resource);
     fireEvent.click(await screen.findByRole('button',{name:'Edit'}));
     const first=await screen.findByLabelText(section.fields[0].label);
@@ -88,5 +88,11 @@ describe('Forms for all admin sections',()=>{
     mount('order');fireEvent.click(await screen.findByRole('button',{name:'View'}));await screen.findByText('Tracking history');
     fireEvent.change(screen.getByLabelText('Status'),{target:{value:'in-transit'}});fireEvent.change(screen.getByLabelText('Public tracking comment'),{target:{value:'Departed hub'}});fireEvent.click(screen.getByRole('button',{name:'Save tracking event'}));
     await screen.findByText('Tracking event added and order status updated.');expect(records.order[0].status).toBe('in-transit');
+  });  it('opens the local item catalog manager',async()=>{
+    mount('item-catalog');
+    expect(await screen.findByRole('heading',{name:'Item Catalog'})).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Container Shipping'})).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Gift Shop'})).toBeTruthy();
   });
 });
+
