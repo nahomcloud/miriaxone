@@ -2,7 +2,9 @@
   "name": "miriax-one",
   "private": true,
   "version": "2.0.0",
-  "workspaces": ["frontend"],
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace frontend",
     "build": "npm run build --workspace frontend",
@@ -11,6 +13,25 @@
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "backend:lint": "python -m ruff check backend",
-    "backend:test": "python -m unittest backend.test_auth backend.test_admin -v"
+    "backend:test": "python -m unittest backend.test_auth backend.test_admin backend.test_network backend.test_storage -v",
+    "worker:types": "wrangler types workers/env.d.ts",
+    "worker:check": "tsc -p workers/tsconfig.json",
+    "worker:test": "vitest run --config workers/vitest.config.ts",
+    "worker:dev": "wrangler dev",
+    "worker:prepare-assets": "node workers/scripts/prepare-assets.mjs",
+    "worker:deploy": "npm run build && npm run worker:prepare-assets && wrangler deploy",
+    "worker:smoke": "node workers/scripts/smoke.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260908.1",
+    "@types/node": "^22.20.1",
+    "node": "^22.23.2",
+    "wrangler": "^4.130.0"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7"
+  },
+  "engines": {
+    "node": ">=22.0.0"
   }
 }

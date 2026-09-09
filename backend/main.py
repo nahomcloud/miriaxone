@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qs, quote, urlencode, urlsplit, urlunsplit
 
 import jwt
 from bson import ObjectId
@@ -69,7 +69,7 @@ def mongo_uri() -> str:
         raise RuntimeError("Set MONGODB_URI or DB_HOST in the API environment")
     username = os.getenv("DB_USERNAME", "")
     password = os.getenv("DB_PASSWORD", "")
-    credentials = f"{username}:{password}@" if username else ""
+    credentials = f"{quote(username, safe='')}:{quote(password, safe='')}@" if username else ""
     return f"mongodb+srv://{credentials}{host}/{DB_NAME}?retryWrites=true&w=majority"
 
 

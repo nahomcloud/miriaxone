@@ -72,11 +72,7 @@ The `frontend/public/_redirects` file preserves client-side routes on refresh. T
 
 For a production-like local container check, copy `config/.env.local.api.example` to `.env.local` and run `docker compose --env-file .env.local up --build`. The frontend image builds the Vite bundle during containerization and serves it through Nginx; the API runs as a separate container. Production variable templates are in `config/.env.production.*.example` and should be entered in the hosting dashboards.
 
-The `miriaxone_workers_migration` branch also contains a Cloudflare Worker API
-boundary. It proxies `/api/*` to the existing FastAPI service through
-`LEGACY_API_URL` while routes are migrated to TypeScript. Deploy it with
-`npx wrangler deploy --config wrangler.toml`; it is not yet a replacement for
-the FastAPI/MongoDB backend.
+The `miriaxone_workers_migration` branch runs the existing FastAPI backend in Cloudflare Containers behind a Worker. The Worker also serves the React build and sends `/api/*` directly to the container. See [Cloudflare deployment](docs/DEPLOYMENT.md) for setup, secrets, and live smoke tests.
 
 ## Main routes
 

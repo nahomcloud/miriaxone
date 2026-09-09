@@ -1,0 +1,75 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "miriaxone-api",
+  "main": "workers/src/index.ts",
+  "compatibility_date": "2026-09-08",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api",
+      "/api/*",
+      "/health",
+      "/media/*"
+    ]
+  },
+  "vars": {
+    "DB_HOST": "miriax.ggc8ky5.mongodb.net",
+    "FRONTEND_URL": "https://miriaxone.com,https://miriaxone.pages.dev"
+  },
+  "secrets_store_secrets": [
+    {
+      "binding": "DB_NAME",
+      "store_id": "68d87e0b97994d79b60f4b65bfe3ffaa",
+      "secret_name": "DB_NAME"
+    },
+    {
+      "binding": "DB_USERNAME",
+      "store_id": "68d87e0b97994d79b60f4b65bfe3ffaa",
+      "secret_name": "DB_USERNAME"
+    },
+    {
+      "binding": "DB_PASSWORD",
+      "store_id": "68d87e0b97994d79b60f4b65bfe3ffaa",
+      "secret_name": "DB_PASSWORD"
+    },
+    {
+      "binding": "JWT_SECRET",
+      "store_id": "68d87e0b97994d79b60f4b65bfe3ffaa",
+      "secret_name": "JWT_SECRET"
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "MiriaxBackend",
+      "image": "./backend/Dockerfile",
+      "image_build_context": ".",
+      "instance_type": "basic",
+      "max_instances": 2
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "BACKEND",
+        "class_name": "MiriaxBackend"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "MiriaxBackend"
+      ]
+    }
+  ],
+  "account_id": "493611d052e0626bcb78857ae47a8af1"
+}

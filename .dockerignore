@@ -7,6 +7,14 @@ backend/__pycache__
 **/__pycache__
 *.pyc
 .env
+.env.*
+**/.env
+**/.env.*
+.dev.vars*
+.wrangler
+.tools
+.venv
+workers
 *.log
 backend/media
 backend/order_files

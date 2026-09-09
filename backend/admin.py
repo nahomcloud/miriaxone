@@ -8,7 +8,8 @@ from typing import Any, Literal
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from backend.storage import save_upload, read_upload
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError, OperationFailure
@@ -226,23 +227,26 @@ def install(app, database, admin_user, serialize):
     router = APIRouter(prefix="/admin", dependencies=[Depends(admin_user)])
 
     @router.post("/uploads/container-image")
-    async def upload_image(file: UploadFile = File(...)):
+    async def upload_image(file: UploadFile = File(...), db=Depends(database)):
         content = await file.read(5 * 1024 * 1024 + 1)
         if len(content) > 5 * 1024 * 1024:
             raise HTTPException(413, "Image must be at most 5 MB")
         extension = "png" if content.startswith(b"\x89PNG\r\n\x1a\n") else "jpg" if content.startswith(b"\xff\xd8\xff") else "webp" if content.startswith(b"RIFF") and content[8:12] == b"WEBP" else None
         if not extension:
             raise HTTPException(422, "Upload a PNG, JPEG, or WebP image")
-        directory = Path(__file__).resolve().parent / "media"
-        directory.mkdir(exist_ok=True)
         filename = hashlib.sha256(content).hexdigest() + "." + extension
-        (directory / filename).write_bytes(content)
+        await save_upload(db, "media/" + filename, content)
         return {"url": "/media/" + filename}
 
     @app.get("/media/{filename}")
-    async def media(filename: str):
+    async def media(filename: str, db=Depends(database)):
         if not re.fullmatch(r"[a-f0-9]{64}\.(png|jpg|webp)", filename):
             raise HTTPException(404, "Image not found")
+        content = await read_upload(db, "media/" + filename)
+        if content is not None:
+            media_type = {"png": "image/png", "jpg": "image/jpeg", "webp": "image/webp"}[filename.rsplit(".", 1)[1]]
+            return Response(content, media_type=media_type, headers={"X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; sandbox"})
+        # Existing standalone installations can still serve older local uploads.
         path = Path(__file__).resolve().parent / "media" / filename
         if not path.is_file():
             raise HTTPException(404, "Image not found")

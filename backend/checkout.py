@@ -7,9 +7,10 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from bson import ObjectId
 from fastapi import Depends, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from starlette.datastructures import UploadFile
 from backend.network import require_available
+from backend.storage import save_upload, read_upload
 
 STORAGE = Path(__file__).resolve().parent / "order_files"
 
@@ -66,20 +67,14 @@ def install(app, database, optional_user, admin_user):
                  "cart": {"formData": fields, "cartData": {"container": container, "cartItems": [product], "taxes": taxes}, "total": float(total)}}
         if user:
             order['userId'] = str(user['_id'])
-        written = []
-        try:
-            for key, name, content, extension in uploads:
-                STORAGE.mkdir(exist_ok=True)
-                storage_key = secrets.token_hex(24) + '.' + extension
-                path = STORAGE / storage_key
-                path.write_bytes(content)
-                written.append(path)
-                order['files'][key] = [{"name": name, "storageKey": storage_key, "size": len(content)}]
-            result = await db.orders.insert_one(order)
-        except Exception:
-            for path in written:
-                path.unlink(missing_ok=True)
-            raise
+        # Commit the order and private uploads together; failed checkouts leave no files.
+        async with await db.client.start_session() as session:
+            async with session.start_transaction():
+                for key, name, content, extension in uploads:
+                    storage_key = secrets.token_hex(24) + '.' + extension
+                    await save_upload(db, 'orders/' + storage_key, content, session=session)
+                    order['files'][key] = [{"name": name, "storageKey": storage_key, "size": len(content)}]
+                result = await db.orders.insert_one(order, session=session)
         return {"model": {"_id": str(result.inserted_id)}, "total": float(total), "message": "Order created; payment pending"}
 
     @app.get('/admin/order/{item_id}/documents/{storage_key}', dependencies=[Depends(admin_user)])
@@ -90,6 +85,12 @@ def install(app, database, optional_user, admin_user):
         order = await db.orders.find_one({'_id': ObjectId(item_id)})
         if not order or not any(item.get('storageKey') == storage_key for items in order.get('files', {}).values() if isinstance(items, list) for item in items if isinstance(item, dict)):
             raise HTTPException(404, "Document not found")
+        content = await read_upload(db, 'orders/' + storage_key)
+        if content is not None:
+            return Response(content, media_type='application/octet-stream', headers={
+                'Content-Disposition': f'attachment; filename="{storage_key}"',
+                'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+            })
         path = STORAGE / storage_key
         if not path.is_file():
             raise HTTPException(404, "Document is unavailable on this API server")
