@@ -1,4 +1,4 @@
-import { Container, getRandom } from '@cloudflare/containers';
+import { Container, getRandom, switchPort } from '@cloudflare/containers';
 import { containerEnvironment, handleRequest, resolveBackendSettings } from './routing';
 
 export class MiriaxBackend extends Container<Env> {
@@ -20,7 +20,7 @@ export class MiriaxBackend extends Container<Env> {
   }
 
   override onError(error: unknown): void {
-    console.error(JSON.stringify({ event: 'backend_container_error' }));
+    console.error(JSON.stringify({ event: 'backend_container_error', message: error instanceof Error ? error.message : String(error) }));
     throw error;
   }
 }
@@ -30,7 +30,8 @@ export default {
     const settings = await resolveBackendSettings(env);
     return handleRequest(request, { ...settings, ASSETS: env.ASSETS }, async (upstream) => {
       const container = await getRandom(env.BACKEND, 1);
-      return container.fetch(upstream);
+      return container.fetch(switchPort(upstream, 7576));
     });
   },
 } satisfies ExportedHandler<Env>;
+
