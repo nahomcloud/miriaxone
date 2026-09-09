@@ -11,6 +11,7 @@ import os
 import re
 import secrets
 import hashlib
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -267,17 +268,28 @@ async def lifespan(app: FastAPI):
     if len(JWT_SECRET.encode()) < 32 or JWT_SECRET == "change-this-secret":
         raise RuntimeError("Set JWT_SECRET to a random secret of at least 32 bytes")
     client = AsyncIOMotorClient(mongo_uri(), serverSelectionTimeoutMS=10000)
-    await client.admin.command("ping")
     app.state.mongo = client
     app.state.database = client[DB_NAME]
-    await app.state.database.auth_attempts.create_index("expiresAt", expireAfterSeconds=0)
-    await app.state.database.platformServices.create_index('key', unique=True)
-    await app.state.database.platformRoutes.create_index([('origin', 1), ('destination', 1), ('service', 1)], unique=True)
-    # Case-insensitive unique indexes also close concurrent registration races.
-    for field in ("email", "username"):
-        await app.state.database.users.create_index(field, unique=True, collation={"locale": "en", "strength": 2}, name=f"unique_{field}_ci")
-    yield
-    client.close()
+
+    async def ensure_indexes() -> None:
+        try:
+            db = app.state.database
+            await db.auth_attempts.create_index("expiresAt", expireAfterSeconds=0)
+            await db.platformServices.create_index("key", unique=True)
+            await db.platformRoutes.create_index([("origin", 1), ("destination", 1), ("service", 1)], unique=True)
+            for field in ("email", "username"):
+                await db.users.create_index(field, unique=True, collation={"locale": "en", "strength": 2}, name=f"unique_{field}_ci")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            print(f"Index initialization failed: {exc}", flush=True)
+
+    index_task = asyncio.create_task(ensure_indexes())
+    try:
+        yield
+    finally:
+        index_task.cancel()
+        client.close()
 
 
 app = FastAPI(title="Miriax Cargo API", version="1.0.0", lifespan=lifespan)
