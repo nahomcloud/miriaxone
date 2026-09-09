@@ -22,7 +22,7 @@
   },
   "vars": {
     "DB_HOST": "miriax.ggc8ky5.mongodb.net",
-    "FRONTEND_URL": "https://miriaxone.com,https://miriaxone.pages.dev"
+    "FRONTEND_URL": "https://miriaxone.com,https://www.miriaxone.com,https://miriaxone.pages.dev"
   },
   "secrets_store_secrets": [
     {
