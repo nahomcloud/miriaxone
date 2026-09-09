@@ -104,7 +104,7 @@ class Setting(Record):
 
 
 class Service(Record):
-    key: Literal['container', 'ship-items']
+    key: Literal['ship-barrel', 'express-gifts', 'custom-cargo']
     name: str = Field(min_length=1, max_length=200)
     status: Literal['active', 'unavailable', 'coming-soon', 'suspended'] = 'active'
     visibility: Literal['visible', 'hidden'] = 'visible'
@@ -114,7 +114,7 @@ class NetworkRoute(Record):
     name: str = Field(min_length=1, max_length=200)
     origin: str = Field(pattern=r'^[A-Za-z]{2,3}$')
     destination: str = Field(pattern=r'^[A-Za-z]{2,3}$')
-    service: Literal['container', 'ship-items']
+    service: Literal['ship-barrel', 'express-gifts', 'custom-cargo']
     status: Literal['active', 'unavailable', 'coming-soon', 'suspended'] = 'active'
     visibility: Literal['visible', 'hidden'] = 'visible'
 

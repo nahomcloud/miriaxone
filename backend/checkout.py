@@ -35,7 +35,7 @@ def install(app, database, optional_user, admin_user):
             fields[key] = fields[key].upper()
             if not await db.countries.find_one({"isoCode": fields[key], "isActive": 1, "archived": {"$ne": True}}):
                 raise HTTPException(422, "Selected country is not available for shipping")
-        fields['serviceKey'] = fields.get('serviceKey', 'container')
+        fields['serviceKey'] = fields.get('serviceKey', 'ship-barrel')
         await require_available(db, fields['fromCountry'], fields['toCountry'], fields['serviceKey'])
         container = await db.containers.find_one({"_id": container_id, "countryCode": fields["toCountry"], "shippingType": shipping_id, "isActive": 1, "archived": {"$ne": True}})
         product = await db.products.find_one({"_id": product_id, "isActive": 1, "archived": {"$ne": True}})

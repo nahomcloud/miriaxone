@@ -12,8 +12,8 @@ let records:Record<string,AdminItem[]>;
 beforeEach(()=>{
   localStorage.clear();localStorage.setItem('habeshaline_token','test-token');fetchMock.mockReset();vi.stubGlobal('fetch',fetchMock);vi.stubGlobal('scrollTo',vi.fn());vi.spyOn(window,'confirm').mockReturnValue(true);
   records={
-    service:[{_id:'service1',key:'container',name:'Fill a Container',status:'active',visibility:'visible'}],
-    'network-route':[{_id:'route1',name:'Test route',origin:'ET',destination:'ET',service:'container',status:'active',visibility:'visible'}],
+    service:[{_id:'service1',key:'ship-barrel',name:'Ship a Barrel',status:'active',visibility:'visible'}],
+    'network-route':[{_id:'route1',name:'Test route',origin:'ET',destination:'ET',service:'ship-barrel',status:'active',visibility:'visible'}],
     order:[{_id:'order1',name:'Parcel',price:100,status:'pending',isPaid:0,cart:JSON.stringify({formData:{receiverName:'Receiver'},cartData:{cartItems:[{name:'Box'}]}}),tracking:[]}],
     product:[{_id:'product1',name:'Box',price:12,width:1,height:2,depth:3,weight:4,isActive:1}],
     container:[{_id:'container1',countryCode:'ET',shippingType:'air1',width:1,height:2,depth:3,price:40,isActive:1,description:'Small container'}],

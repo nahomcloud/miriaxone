@@ -1,7 +1,11 @@
 """Miriax One service availability, shared by discovery and checkout."""
 from fastapi import Depends, HTTPException
 
-SERVICE_NAMES = {'container': 'Fill a Container', 'ship-items': 'Ship My Items'}
+SERVICE_NAMES = {
+    'ship-barrel': 'Ship a Barrel',
+    'express-gifts': 'Express Gifts',
+    'custom-cargo': 'Custom Cargo',
+}
 
 
 async def configuration(db):
