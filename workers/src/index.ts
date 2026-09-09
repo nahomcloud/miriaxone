@@ -1,4 +1,4 @@
-import { Container, getRandom, switchPort } from '@cloudflare/containers';
+import { Container, getContainer, switchPort } from '@cloudflare/containers';
 import { containerEnvironment, handleRequest, resolveBackendSettings } from './routing';
 
 export class MiriaxBackend extends Container<Env> {
@@ -29,9 +29,10 @@ export default {
   async fetch(request, env): Promise<Response> {
     const settings = await resolveBackendSettings(env);
     return handleRequest(request, { ...settings, ASSETS: env.ASSETS }, async (upstream) => {
-      const container = await getRandom(env.BACKEND, 1);
+      const container = getContainer(env.BACKEND, 'backend-v2');
       return container.fetch(switchPort(upstream, 7576));
     });
   },
 } satisfies ExportedHandler<Env>;
+
 
