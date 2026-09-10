@@ -471,11 +471,11 @@ for resource in COLLECTIONS:
 
 @app.get("/site/states/{country_code}")
 async def public_states(country_code: str, db=Depends(database)):
-    return await find_many(db, "state", {"countryCode": country_code.upper()})
+    return await find_many(db, "state", {"countryCode": country_code.upper(), "isActive": {"$ne": 0}})
 
 @app.get("/site/cities/{country_code}/{state_code}")
 async def public_cities(country_code: str, state_code: str, db=Depends(database)):
-    return await find_many(db, "city", {"countryCode": country_code.upper(), "stateCode": state_code.upper()})
+    return await find_many(db, "city", {"countryCode": country_code.upper(), "stateCode": state_code.upper(), "isActive": {"$ne": 0}})
 
 @app.get("/site/settings")
 async def public_settings(db=Depends(database)):

@@ -71,6 +71,7 @@ class Country(Record):
 
 
 class State(Record):
+    isActive: Literal[0, 1] = 1
     isoCode: str = Field(min_length=1, max_length=10)
     name: str = Field(min_length=1, max_length=200)
     countryCode: str = Field(min_length=2, max_length=3)
@@ -79,6 +80,7 @@ class State(Record):
 
 
 class City(Record):
+    isActive: Literal[0, 1] = 1
     name: str = Field(min_length=1, max_length=200)
     countryCode: str = Field(min_length=2, max_length=3)
     stateCode: str = Field(min_length=1, max_length=10)

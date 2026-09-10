@@ -201,6 +201,19 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(self.client.get(url,headers=self.headers).content,b'%PDF-1.4 test document')
             self.assertEqual(self.client.get(f"/admin/order/{ObjectId()}/documents/{document['storageKey']}",headers=self.headers).status_code,404)
 
+    def test_gift_checkout_creates_server_order_and_rejects_tampered_price(self):
+        payload = {'items': [{'productId': 'roses12', 'name': 'Red Roses (12 stems)', 'qty': 2, 'price': 45, 'sizeLabel': 'Classic', 'delivery': 'Same Day'}],
+                   'address': {'recipient': 'Family', 'city': 'Addis Ababa', 'address': 'Bole', 'phone': '+251'}, 'instructions': 'Call first', 'submittedTotal': 90}
+        response = self.client.post('/site/gift-checkout', headers=self.headers, json=payload)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()['total'], 90)
+        order = self.db.orders.records[-1]
+        self.assertEqual(order['status'], 'pending')
+        self.assertEqual(order['isPaid'], 0)
+        self.assertEqual(order['cart']['formData']['serviceKey'], 'express-gifts')
+        tampered = payload | {'items': [payload['items'][0] | {'price': 1}], 'submittedTotal': 2}
+        self.assertEqual(self.client.post('/site/gift-checkout', headers=self.headers, json=tampered).status_code, 422)
+
     def test_public_contact_validates_and_initializes_handling_status(self):
         response=self.client.post('/contact-us',json=self.payloads['contact-us'])
         self.assertEqual(response.status_code,200)

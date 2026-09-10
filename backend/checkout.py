@@ -13,9 +13,67 @@ from backend.network import require_available
 from backend.storage import save_upload, read_upload
 
 STORAGE = Path(__file__).resolve().parent / "order_files"
+GIFT_CATALOG = {
+    "roses12": {"name": "Red Roses (12 stems)", "price": 45, "variants": {"roses12-classic": 45, "roses12-deluxe": 68}},
+    "bouquet": {"name": "Mixed Seasonal Bouquet", "price": 65, "variants": {"bouquet-small": 65, "bouquet-large": 95}},
+    "sunflwr": {"name": "Sunflower Bunch (10)", "price": 40, "variants": {}},
+    "coffee": {"name": "Ethiopian Coffee Gift Box", "price": 38, "variants": {"coffee-500": 38, "coffee-1kg": 62}},
+    "chocolate": {"name": "Premium Chocolate Hamper", "price": 58, "variants": {}},
+    "fragrance": {"name": "Signature Fragrance", "price": 78, "variants": {"frag-30": 78, "frag-100": 128}},
+    "care-box": {"name": "Family Care Box", "price": 72, "variants": {"care-small": 72, "care-family": 118}},
+    "cake": {"name": "Celebration Cake", "price": 52, "variants": {"cake-8": 52, "cake-10": 78}},
+}
 
 
 def install(app, database, optional_user, admin_user):
+    @app.post("/site/gift-checkout")
+    async def gift_checkout(request: Request, db=Depends(database), user=Depends(optional_user)):
+        payload = await request.json()
+        items = payload.get("items") if isinstance(payload, dict) else None
+        address = payload.get("address") if isinstance(payload, dict) else None
+        if not isinstance(items, list) or not items:
+            raise HTTPException(422, "Add at least one gift item")
+        if not isinstance(address, dict) or not all(str(address.get(key, "")).strip() for key in ("recipient", "city", "address", "phone")):
+            raise HTTPException(422, "Recipient name, city, address, and phone are required")
+        lines = []
+        total = Decimal("0")
+        for item in items:
+            if not isinstance(item, dict):
+                raise HTTPException(422, "Invalid gift item")
+            product = GIFT_CATALOG.get(str(item.get("productId", "")))
+            if not product:
+                raise HTTPException(422, "A gift item is no longer available")
+            try:
+                qty = int(item.get("qty", 0))
+            except Exception:
+                raise HTTPException(422, "Invalid gift quantity")
+            if qty <= 0 or qty > 25:
+                raise HTTPException(422, "Gift quantities must be between 1 and 25")
+            variant_label = str(item.get("sizeLabel", "")).strip()
+            variants = product["variants"]
+            price = Decimal(str(product["price"]))
+            if variant_label:
+                variant_key = next((key for key in variants if key.split("-", 1)[-1].lower() == variant_label.lower().replace(" ", "-")), None)
+                price = Decimal(str(variants.get(variant_key, product["price"])))
+            submitted_price = Decimal(str(item.get("price", -1))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if submitted_price != price.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP):
+                raise HTTPException(422, "Gift price changed. Refresh the cart and try again")
+            total += price * qty
+            lines.append({"productId": item.get("productId"), "name": product["name"], "qty": qty, "price": float(price), "sizeLabel": variant_label, "delivery": item.get("delivery", "")})
+        submitted_total = Decimal(str(payload.get("submittedTotal", -1))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        total = total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if submitted_total != total:
+            raise HTTPException(422, "Gift total changed. Review the cart and try again")
+        now = datetime.now(timezone.utc)
+        order = {"name": f"Express Gifts for {address['recipient']}", "price": float(total), "status": "pending", "isPaid": 0, "txnId": "",
+                 "createdAt": now, "updatedAt": now, "files": {},
+                 "cart": {"formData": {"serviceKey": "express-gifts", "recipient": address["recipient"], "city": address["city"], "address": address["address"], "phone": address["phone"], "instructions": payload.get("instructions", "")}, "cartData": {"cartItems": lines}, "total": float(total)}}
+        if user:
+            order["userId"] = str(user["_id"])
+            order["email"] = user.get("email", "")
+        result = await db.orders.insert_one(order)
+        return {"model": {"_id": str(result.inserted_id)}, "total": float(total), "message": "Gift order created; payment pending"}
+
     @app.post("/site/checkout")
     async def checkout(request: Request, db=Depends(database), user=Depends(optional_user)):
         form = await request.form()
