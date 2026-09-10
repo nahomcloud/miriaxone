@@ -64,10 +64,12 @@ def install(app, database, optional_user, admin_user):
         total = total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         if submitted_total != total:
             raise HTTPException(422, "Gift total changed. Review the cart and try again")
+        occasion = str(payload.get("occasion", "")).strip()[:80]
+        surprise_note = str(payload.get("surpriseNote", "")).strip()[:1000]
         now = datetime.now(timezone.utc)
         order = {"name": f"Express Gifts for {address['recipient']}", "price": float(total), "status": "pending", "isPaid": 0, "txnId": "",
                  "createdAt": now, "updatedAt": now, "files": {},
-                 "cart": {"formData": {"serviceKey": "express-gifts", "recipient": address["recipient"], "city": address["city"], "address": address["address"], "phone": address["phone"], "instructions": payload.get("instructions", "")}, "cartData": {"cartItems": lines}, "total": float(total)}}
+                 "cart": {"formData": {"serviceKey": "express-gifts", "recipient": address["recipient"], "city": address["city"], "address": address["address"], "phone": address["phone"], "instructions": payload.get("instructions", ""), "occasion": occasion, "surpriseNote": surprise_note}, "cartData": {"cartItems": lines}, "total": float(total)}}
         if user:
             order["userId"] = str(user["_id"])
             order["email"] = user.get("email", "")

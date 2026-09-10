@@ -29,7 +29,7 @@ export default {
   async fetch(request, env): Promise<Response> {
     const settings = await resolveBackendSettings(env);
     return handleRequest(request, { ...settings, ASSETS: env.ASSETS }, async (upstream) => {
-      const container = getContainer(env.BACKEND, 'backend-v2');
+      const container = getContainer(env.BACKEND, 'backend-v3');
       return container.fetch(switchPort(upstream, 7576));
     });
   },
