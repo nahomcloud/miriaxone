@@ -31,3 +31,15 @@ body:has(.one-hero) header .brand,body:has(.one-hero) header .nav nav{color:var(
 /* Shared readable photo hero for every non-home page. */
 .page-hero,.service-flow-hero{min-height:clamp(360px,52svh,620px);display:flex;align-items:center;background:linear-gradient(90deg,rgba(12,28,52,.94) 0%,rgba(12,28,52,.76) 48%,rgba(12,28,52,.28) 100%),url('/assets/hero.jpg') center/cover!important;color:var(--white)!important;padding:clamp(110px,14vh,170px) 0 84px}.page-hero .container,.service-flow-hero .container{max-width:980px}.page-hero h1,.service-flow-hero h1{color:var(--white)!important;font-size:clamp(52px,8vw,100px);line-height:.96;text-shadow:0 2px 22px rgba(0,0,0,.36);max-width:850px}.page-hero p,.service-flow-hero p{color:#f3eee7!important;font-size:clamp(18px,2vw,22px);line-height:1.5;max-width:680px;text-shadow:0 1px 16px rgba(0,0,0,.35)}.page-hero .eyebrow,.service-flow-hero .eyebrow{color:#dfc89f!important}.section{background:var(--paper)}.section.muted,.warm{background:var(--muted)}.contact-grid,.split,.ship-layout,.flow-layout,.custom-flow,.narrow{position:relative}.feature-image{box-shadow:none;border:1px solid var(--line)}@media(max-width:700px){.page-hero,.service-flow-hero{min-height:460px;background-position:60% center!important;padding:118px 0 58px}.page-hero h1,.service-flow-hero h1{font-size:clamp(44px,14vw,68px)}}
 .route-inline-action{margin-top:18px}.route-inline-action .button{display:inline-flex;align-items:center;gap:8px}.route-inline-action .error{background:#fff5f0;color:#8d2a12;padding:12px 14px;border-left:4px solid #c7471b}
+
+/* Homepage noise reduction polish. */
+.one-simple-service .button{margin-top:22px;display:inline-flex;align-items:center;gap:8px;width:max-content;max-width:100%}
+.one-service-grid.one-simple-service{grid-template-columns:minmax(0,720px);justify-content:start}
+.one-gifts .one-simple-service,.one-custom .one-simple-service{max-width:620px}
+.light-action{background:var(--white)!important;color:var(--navy)!important}
+.light-action:hover{background:#f3eee7!important;color:var(--navy)!important}
+.ghost-cta.primary{background:var(--white);color:var(--navy);border-color:var(--white)}
+.ghost-cta.quiet{background:rgba(255,255,255,.04)}
+.ghost-cta.primary:hover{background:#f3eee7}
+.ghost-cta.quiet:hover{background:rgba(255,255,255,.16)}
+@media(max-width:700px){.one-simple-service .button{width:100%}.one-service-grid.one-simple-service{justify-content:stretch}.one-gifts .one-simple-service,.one-custom .one-simple-service{max-width:none}}

@@ -1,24 +1,23 @@
-import { afterEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import OneHome from './OneHome';
 
-afterEach(()=>{cleanup();vi.unstubAllGlobals()});
-it('uses server availability and carries route selection to real checkout',async()=>{
-  vi.stubGlobal('fetch',vi.fn(async (url:string)=>new Response(JSON.stringify(url.includes('platform-config')?{countries:[{iso:'US',name:'United States',canSendFrom:1,canDeliverTo:0},{iso:'ET',name:'Ethiopia',canSendFrom:0,canDeliverTo:1}]}:[{key:'ship-barrel',name:'Ship a Barrel',status:'active',visibility:'visible',available:true,reason:''},{key:'express-gifts',name:'Express Gifts',status:'suspended',visibility:'visible',available:false,reason:'This service is not currently available.'},{key:'custom-cargo',name:'Custom Cargo',status:'active',visibility:'hidden',available:false,reason:''}]),{status:200})));
+afterEach(()=>cleanup());
+
+it('keeps the homepage focused on one service choice path',()=>{
   render(<MemoryRouter future={{v7_startTransition:true,v7_relativeSplatPath:true}}><OneHome/></MemoryRouter>);
-  await screen.findByRole('option',{name:'United States'});
-  fireEvent.change(screen.getByLabelText('From'),{target:{value:'US'}});
-  fireEvent.change(screen.getByLabelText('To'),{target:{value:'ET'}});
-  const booking=await screen.findByRole('link',{name:'Build your barrel'});
-  expect(booking.getAttribute('href')).toBe('/ship?origin=US&destination=ET&service=ship-barrel');
-  expect(screen.getAllByRole('link',{name:/Build your barrel/})).toHaveLength(2);
-  expect(screen.getAllByText('This service is not currently available.')).toHaveLength(2);
+  expect(screen.getByRole('heading',{name:'Move what matters.'})).toBeTruthy();
+  expect(screen.getByRole('link',{name:/Choose a service/}).getAttribute('href')).toBe('/ship');
+  expect(screen.getByRole('link',{name:/Build barrel/}).getAttribute('href')).toBe('/ship?service=ship-barrel');
+  expect(screen.getByRole('link',{name:/Send gift/}).getAttribute('href')).toBe('/ship?service=express-gifts');
+  expect(screen.getByRole('link',{name:/Request quote/}).getAttribute('href')).toBe('/ship?service=custom-cargo');
+  expect(screen.queryByText('Choose a route and see what is open.')).toBeNull();
 });
 
-it('shows API failures without displaying fabricated services',async()=>{
-  vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({detail:'Service unavailable'}),{status:503})));
+it('removes repeated service-card noise from the homepage',()=>{
   render(<MemoryRouter future={{v7_startTransition:true,v7_relativeSplatPath:true}}><OneHome/></MemoryRouter>);
-  expect((await screen.findByRole('alert')).textContent).toContain('Service unavailable');
-  expect(screen.queryByRole('link',{name:'Build your barrel'})).toBeNull();
+  expect(screen.queryByText('Small family barrel')).toBeNull();
+  expect(screen.queryByText('Care box')).toBeNull();
+  expect(screen.queryByText('Core services')).toBeNull();
 });
