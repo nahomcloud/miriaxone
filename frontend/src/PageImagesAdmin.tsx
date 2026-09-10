@@ -1,4 +1,4 @@
-﻿import { ChangeEvent, useState } from 'react';
+import { ChangeEvent, useState } from 'react';
 import { ImagePlus, RotateCcw, Save, X } from 'lucide-react';
 import { loadPageImages, pageImages, savePageImages } from './pageImages';
 

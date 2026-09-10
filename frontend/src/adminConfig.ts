@@ -1,4 +1,4 @@
-﻿export type Field = { key: string; label: string; type?: 'number' | 'textarea' | 'country' | 'state' | 'shipping' | 'active' | 'select' | 'secret'; required?: boolean; min?: number; max?: number; options?: string[] };
+export type Field = { key: string; label: string; type?: 'number' | 'textarea' | 'country' | 'state' | 'shipping' | 'active' | 'select' | 'secret'; required?: boolean; min?: number; max?: number; options?: string[] };
 export type Section = { label: string; resource: string; fields: Field[]; columns: string[]; active?: boolean };
 const name: Field = { key: 'name', label: 'Name', required: true };
 const country: Field = { key: 'countryCode', label: 'Country', type: 'country', required: true };

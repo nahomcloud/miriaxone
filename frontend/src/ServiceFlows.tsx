@@ -1,5 +1,5 @@
-﻿import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Gift, PackageCheck, Truck } from 'lucide-react';
 import { CatalogItem, CatalogVariant, GiftAddress, GiftCartItem, loadCatalog, loadGiftAddresses, loadGiftCart, money, saveGiftAddresses, saveGiftCart } from './catalog';
 import { api } from './api';
@@ -37,7 +37,8 @@ function lineWeight(line: CartLine) { return ((line.variant?.weightLb ?? line.it
 function lineVolume(line: CartLine) { return ((line.variant?.volumeIn3 ?? line.item.volumeIn3) || 0) * line.qty; }
 
 export default function ServiceFlowRouter() {
-  const params = new URLSearchParams(location.search);
+  const routerLocation = useLocation();
+  const params = new URLSearchParams(routerLocation.search);
   const service = params.get('service');
   if (!service) return <ServiceChooser />;
   if (service === 'express-gifts') return <ExpressGiftsFlow />;
@@ -59,8 +60,8 @@ function ServiceChooser() {
 }
 
 function ShipBarrelFlow() {
-  const params = new URLSearchParams(location.search);
-  const routeDestination = params.get('destination') || '';
+  const routerLocation = useLocation();
+  const routeDestination = useMemo(() => new URLSearchParams(routerLocation.search).get('destination') || '', [routerLocation.search]);
   const [category, setCategory] = useState('All');
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [cart, setCart] = useState<CartLine[]>(loadBarrelCart);

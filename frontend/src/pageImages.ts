@@ -1,4 +1,4 @@
-﻿export type PageImage={key:string;label:string;description:string;defaultUrl:string};
+export type PageImage={key:string;label:string;description:string;defaultUrl:string};
 export const pageImageKey='miriax_page_images';
 export const pageImages:PageImage[]=[
   {key:'homeHero',label:'Home hero',description:'Full-screen landing page background.',defaultUrl:'/assets/hero.jpg'},
