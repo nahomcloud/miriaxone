@@ -4,6 +4,7 @@ import { api, mediaUrl } from './api';
 import { SignOutButton } from './auth';
 import { adminSections, AdminItem, AdminPage, columnLabels, Field } from './adminConfig';
 import ItemCatalogAdmin from './ItemCatalogAdmin';
+import PageImagesAdmin from './PageImagesAdmin';
 
 function orderCart(value:unknown):Record<string,unknown>{try{const parsed=typeof value==='string'?JSON.parse(value):value;return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{} }catch{return {}}}
 function attachments(value:unknown):{name:string;storageKey:string}[]{if(!value||typeof value!=='object')return [];return Object.values(value).flatMap(items=>Array.isArray(items)?items.filter(item=>item&&typeof item.storageKey==='string').map(item=>({name:String(item.name||'Document'),storageKey:item.storageKey})):[])}
@@ -17,7 +18,7 @@ function Snapshot({value}:{value:unknown}) {
 
 const adminGroups=[
   {label:'Overview',items:['dashboard']},
-  {label:'Catalog',items:['item-catalog','product','container','shipping-type']},
+  {label:'Catalog',items:['item-catalog','page-images','product','container','shipping-type']},
   {label:'Network',items:['network-service','network-route','country','state','city']},
   {label:'Documents & tax',items:['country-document','tax-rate']},
   {label:'Customers',items:['order','contact-us','global-settings']},
@@ -42,7 +43,7 @@ export default function AdminPanel(){
   const firstField=useRef<HTMLInputElement|null>(null);
   const editorBox=useRef<HTMLDivElement|null>(null);
   const requestId=useRef(0);
-  const specialSection = section.resource==='item-catalog' || section.resource==='dashboard';
+  const specialSection = section.resource==='item-catalog' || section.resource==='page-images' || section.resource==='dashboard';
   const selectedRows=result.items.filter(row=>selected.includes(String(row._id)));
   const allVisibleSelected=result.items.length>0&&result.items.every(row=>selected.includes(String(row._id)));
   const activeCapable=section.active||section.fields.some(field=>field.key==='isActive');
@@ -102,6 +103,7 @@ export default function AdminPanel(){
   }
   function display(row:AdminItem,key:string){const value=row[key];if(key==='value'&&row.type==='private')return row.hasValue?'Configured (hidden)':'Not configured';if(key==='canSendFrom'||key==='canDeliverTo')return <button type="button" className={value===1?'status-toggle on':'status-toggle off'} disabled={busy} onClick={()=>void toggleField(row,key)}>{value===1?'Enabled':'Disabled'}</button>;if(key==='isActive')return <span className={value===0?'status inactive':'status'}>{value===0?'Inactive':'Active'}</span>;if(key==='isPaid')return value===1?'Paid':'Unpaid';if(key==='shippingType')return String(methods.find(m=>m._id===value)?.name||value||'—');if(key==='countryCode')return String(countries.find(c=>c.isoCode===value)?.name||value||'—');if(key==='createdAt')return value?new Date(String(value)).toLocaleDateString():'—';if(key==='price')return Number(value||0).toLocaleString('en-US',{style:'currency',currency:'USD'});if(key==='rate')return `${value??0}%`;return String(value??'—')}
   if(section.resource==='item-catalog')return <section className="admin-shell"><AdminSidebar section={section} busy={busy} navigate={navigate}/><ItemCatalogAdmin/></section>;
+  if(section.resource==='page-images')return <section className="admin-shell"><AdminSidebar section={section} busy={busy} navigate={navigate}/><PageImagesAdmin/></section>;
   if(section.resource==='dashboard')return <section className="admin-shell"><AdminSidebar section={section} busy={busy} navigate={navigate}/><div className="admin-main"><div className="admin-top"><div><span className="eyebrow">Operations overview</span><h1>Dashboard</h1><p>Live KPIs for orders, revenue, pending shipments, and delivered count will appear here as analytics mature.</p></div><SignOutButton/></div><div className="metrics"><div><b>Total orders</b><span>Connected to Orders</span></div><div><b>Revenue</b><span>Current period</span></div><div><b>Pending</b><span>Needs action</span></div><div><b>Delivered</b><span>Completed shipments</span></div></div></div></section>;
   return <section className="admin-shell"><AdminSidebar section={section} busy={busy} navigate={navigate}/>
     <div className="admin-main"><div className="admin-top"><div><span className="eyebrow">Operations</span><h1>{section.label}</h1></div><SignOutButton/></div>

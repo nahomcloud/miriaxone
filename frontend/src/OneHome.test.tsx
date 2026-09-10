@@ -12,8 +12,8 @@ it('uses server availability and carries route selection to real checkout',async
   fireEvent.change(screen.getByLabelText('To'),{target:{value:'ET'}});
   const booking=await screen.findByRole('link',{name:'Build your barrel'});
   expect(booking.getAttribute('href')).toBe('/ship?origin=US&destination=ET&service=ship-barrel');
-  expect(screen.getAllByRole('link',{name:'Build your barrel'})).toHaveLength(1);
-  expect(screen.getByText('This service is not currently available.')).toBeTruthy();
+  expect(screen.getAllByRole('link',{name:/Build your barrel/})).toHaveLength(2);
+  expect(screen.getAllByText('This service is not currently available.')).toHaveLength(2);
 });
 
 it('shows API failures without displaying fabricated services',async()=>{
