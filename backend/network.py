@@ -19,9 +19,13 @@ async def configuration(db):
                     service.update(status='unavailable', visibility='hidden')
     countries = [dict(iso=c['isoCode'], name=c['name'], canSendFrom=c.get('canSendFrom', 1), canDeliverTo=c.get('canDeliverTo', 1))
                  async for c in db.countries.find({'isActive': 1, 'archived': {'$ne': True}})]
+    active_country_codes = {c['iso'] for c in countries}
+    cities = [dict(id=str(c.get('_id', '')), name=c['name'], countryCode=c['countryCode'], stateCode=c.get('stateCode', ''))
+              async for c in db.cities.find({'isActive': {'$ne': 0}, 'archived': {'$ne': True}})
+              if c.get('countryCode') in active_country_codes]
     routes = [{k: r.get(k) for k in ('origin', 'destination', 'service', 'status', 'visibility', 'archived')}
               async for r in db.platformRoutes.find({})]
-    return dict(services=services, countries=countries, routes=routes, managedNetwork=bool(routes))
+    return dict(services=services, countries=countries, cities=cities, routes=routes, managedNetwork=bool(routes))
 
 
 def resolve(config, origin, destination, key):
