@@ -20,9 +20,13 @@ async def configuration(db):
     countries = [dict(iso=c['isoCode'], name=c['name'], canSendFrom=c.get('canSendFrom', 1), canDeliverTo=c.get('canDeliverTo', 1))
                  async for c in db.countries.find({'isActive': 1, 'archived': {'$ne': True}})]
     active_country_codes = {c['iso'] for c in countries}
-    cities = [dict(id=str(c.get('_id', '')), name=c['name'], countryCode=c['countryCode'], stateCode=c.get('stateCode', ''))
+    cities = [dict(id=str(c.get('_id', '')), name=c['name'], countryCode=c['countryCode'], stateCode=c.get('stateCode', ''), kind='city')
               async for c in db.cities.find({'isActive': {'$ne': 0}, 'archived': {'$ne': True}})
               if c.get('countryCode') in active_country_codes]
+    city_countries = {c['countryCode'] for c in cities}
+    cities += [dict(id=str(s.get('_id', '')), name=s['name'], countryCode=s['countryCode'], stateCode=s.get('isoCode', ''), kind='region')
+               async for s in db.states.find({'isActive': {'$ne': 0}, 'archived': {'$ne': True}})
+               if s.get('countryCode') in active_country_codes and s.get('countryCode') not in city_countries]
     routes = [{k: r.get(k) for k in ('origin', 'destination', 'service', 'status', 'visibility', 'archived')}
               async for r in db.platformRoutes.find({})]
     return dict(services=services, countries=countries, cities=cities, routes=routes, managedNetwork=bool(routes))
