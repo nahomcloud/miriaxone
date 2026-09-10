@@ -119,6 +119,16 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.client.get('/site/countries').json(), [])
 
+    def test_active_filter_includes_legacy_geography_without_flag(self):
+        legacy_city = {'_id': ObjectId(), 'name': 'Legacy city', 'countryCode': 'ET', 'stateCode': 'AA'}
+        self.db.cities.records.append(legacy_city)
+        self.create('city', name='Hidden city', isActive=0)
+        active = self.client.get('/admin/city?status=active', headers=self.headers).json()
+        inactive = self.client.get('/admin/city?status=inactive', headers=self.headers).json()
+        self.assertIn(str(legacy_city['_id']), [row['_id'] for row in active['items']])
+        self.assertNotIn('Hidden city', [row['name'] for row in active['items']])
+        self.assertEqual([row['name'] for row in inactive['items']], ['Hidden city'])
+
     def test_private_setting_is_never_returned_and_blank_preserves_value(self):
         item = self.create('global-settings', slug='square_payment_access_token', type='public', value='test-secret-never-display')
         self.assertEqual(item['type'], 'private')

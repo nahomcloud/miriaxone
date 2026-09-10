@@ -267,7 +267,7 @@ def install(app, database, admin_user, serialize):
                 query[key] = value.upper()
         if status:
             if status in {"active", "inactive"}:
-                query["isActive"] = 1 if status == "active" else 0
+                query["isActive"] = {"$ne": 0} if status == "active" else 0
             else:
                 query["status"] = status
         field = sort.lstrip("-")
