@@ -41,7 +41,7 @@ const containers = [
 ];
 
 function loadBarrelCart(): CartLine[] { try { return JSON.parse(localStorage.getItem(barrelCartKey) || '[]'); } catch { return []; } }
-function saveBarrelCart(lines: CartLine[]) { localStorage.setItem(barrelCartKey, JSON.stringify(lines)); window.dispatchEvent(new Event('miriax-cart')); }
+function saveBarrelCart(lines: CartLine[], name?: string) { localStorage.setItem(barrelCartKey, JSON.stringify(lines)); window.dispatchEvent(new CustomEvent('miriax-cart', { detail: name ? { name } : {} })); }
 function itemsFor(service: CatalogItem['service']) { return loadCatalog().filter(item => item.service === service && item.status === 'live'); }
 function linePrice(line: CartLine) { return ((line.variant?.price ?? line.item.price) || 0) * line.qty; }
 function lineWeight(line: CartLine) { return ((line.variant?.weightLb ?? line.item.weightLb) || 0) * line.qty; }
@@ -134,9 +134,9 @@ function ShipBarrelFlow() {
   const fillPercent = Math.round((volume / selectedBarrel.volumeIn3) * 100);
   const overfilled = volume > selectedBarrel.volumeIn3;
 
-  function persist(next: CartLine[]) { setCart(next); saveBarrelCart(next); }
-  function add(item: CatalogItem) { const variant = item.variants.find(v => v.id === selected[item.id]); if (item.variants.length && !variant) return; const next = [...cart]; const existing = next.find(line => line.item.id === item.id && (line.variant?.id || '') === (variant?.id || '')); existing ? existing.qty++ : next.push({ item, variant, qty: 1 }); persist(next); setAdded(item.name); }
-  function changeQty(itemId: string, variantId: string | undefined, delta: number) { const next = cart.flatMap(line => { if (line.item.id !== itemId || (line.variant?.id || '') !== (variantId || '')) return [line]; const qty = line.qty + delta; return qty > 0 ? [{ ...line, qty }] : []; }); persist(next); }
+  function persist(next: CartLine[], name?: string) { setCart(next); saveBarrelCart(next, name); }
+  function add(item: CatalogItem) { const variant = item.variants.find(v => v.id === selected[item.id]); if (item.variants.length && !variant) return; const next = [...cart]; const existing = next.find(line => line.item.id === item.id && (line.variant?.id || '') === (variant?.id || '')); existing ? existing.qty++ : next.push({ item, variant, qty: 1 }); persist(next, item.name); setAdded(item.name); }
+  function changeQty(itemId: string, variantId: string | undefined, delta: number) { const current = cart.find(line => line.item.id === itemId && (line.variant?.id || '') === (variantId || '')); const next = cart.flatMap(line => { if (line.item.id !== itemId || (line.variant?.id || '') !== (variantId || '')) return [line]; const qty = line.qty + delta; return qty > 0 ? [{ ...line, qty }] : []; }); persist(next, delta > 0 ? current?.item.name : undefined); }
   function lineFor(item: CatalogItem) { const variantId = selected[item.id] || ''; return cart.find(line => line.item.id === item.id && (line.variant?.id || '') === variantId); }
   function applyStarterPack(pack: typeof starterBarrelPacks[number]) { const next = pack.items.flatMap(entry => { const item = catalog.find(c => c.id === entry.id); return item ? [{ item, qty: entry.qty }] : []; }); persist(next); setDone(''); }
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -219,7 +219,7 @@ function ExpressGiftsFlow() {
   const viewPrice = viewVariant?.price ?? view?.price ?? 0;
   const subtotal = cart.reduce((sum, line) => sum + line.price * line.qty, 0);
   const pieces = cart.reduce((sum, line) => sum + line.qty, 0);
-  function persist(next: GiftCartItem[]) { setCart(next); saveGiftCart(next); }
+  function persist(next: GiftCartItem[], name?: string) { setCart(next); saveGiftCart(next, name); }
   function continueShopping() { setCheckout(false); setViewId(''); productListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   function add(item: CatalogItem, count = 1) {
     const variant = item.variants.find(entry => entry.id === selected[item.id]);
@@ -227,7 +227,7 @@ function ExpressGiftsFlow() {
     const sizeLabel = variant?.label;
     const price = variant?.price ?? item.price;
     const index = cart.findIndex(line => line.productId === item.id && (line.sizeLabel || '') === (sizeLabel || ''));
-    persist(index >= 0 ? cart.map((line, i) => i === index ? { ...line, qty: Math.min(25, line.qty + count), price } : line) : [...cart, { productId: item.id, name: item.name, qty: count, price, sizeLabel, delivery: item.deliverySpeed, image: item.image }]);
+    persist(index >= 0 ? cart.map((line, i) => i === index ? { ...line, qty: Math.min(25, line.qty + count), price } : line) : [...cart, { productId: item.id, name: item.name, qty: count, price, sizeLabel, delivery: item.deliverySpeed, image: item.image }], item.name);
     setDone('');
     setAdded(item.name);
     const key = `${item.id}-${sizeLabel || ''}`;
@@ -240,7 +240,7 @@ function ExpressGiftsFlow() {
     setCheckout(false);
     if (item.variants.length && !selected[item.id]) setSelected(current => ({ ...current, [item.id]: item.variants[0].id }));
   }
-  function qty(index: number, delta: number) { persist(cart.map((line, i) => i === index ? { ...line, qty: Math.max(1, line.qty + delta) } : line)); }
+  function qty(index: number, delta: number) { const line = cart[index]; persist(cart.map((entry, i) => i === index ? { ...entry, qty: Math.max(1, entry.qty + delta) } : entry), delta > 0 ? line?.name : undefined); }
   function remove(index: number) { persist(cart.filter((_, i) => i !== index)); }
   async function confirm(e: FormEvent) {
     e.preventDefault();

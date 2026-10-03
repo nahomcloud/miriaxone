@@ -50,7 +50,7 @@ function normalize(value:any):CatalogItem|null{if(!value||typeof value!=='object
 export function loadCatalog():CatalogItem[]{try{const raw=localStorage.getItem(catalogKey)||localStorage.getItem(legacyCatalogKey);const parsed=raw?JSON.parse(raw):[];const saved=Array.isArray(parsed)?parsed.map(normalize).filter(Boolean) as CatalogItem[]:[];const ids=new Set(saved.map(i=>i.id));const merged=[...saved,...sample.filter(i=>!ids.has(i.id))];if(!localStorage.getItem(catalogKey))saveCatalog(merged);return merged}catch{return sample}}
 export function saveCatalog(items:CatalogItem[]){localStorage.setItem(catalogKey,JSON.stringify(items))}
 export function loadGiftCart():GiftCartItem[]{try{return JSON.parse(localStorage.getItem(giftCartKey)||'[]')}catch{return []}}
-export function saveGiftCart(items:GiftCartItem[]){localStorage.setItem(giftCartKey,JSON.stringify(items));window.dispatchEvent(new Event('miriax-cart'))}
+export function saveGiftCart(items:GiftCartItem[], name?: string){localStorage.setItem(giftCartKey,JSON.stringify(items));window.dispatchEvent(new CustomEvent('miriax-cart',{detail:name?{name}:{}}))}
 export function loadGiftOrders():GiftOrder[]{try{return JSON.parse(localStorage.getItem(giftOrdersKey)||'[]')}catch{return []}}
 export function saveGiftOrders(items:GiftOrder[]){localStorage.setItem(giftOrdersKey,JSON.stringify(items))}
 export function loadGiftAddresses():GiftAddress[]{try{const saved=JSON.parse(localStorage.getItem(giftAddressesKey)||'[]');return Array.isArray(saved)?saved:[]}catch{return []}}

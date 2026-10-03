@@ -24,20 +24,29 @@ function cartCount(){
 function CartLink(){
   const [count,setCount]=useState(0);
   const [bump,setBump]=useState(false);
+  const [notice,setNotice]=useState('');
   const seen=useRef(false);
   const last=useRef(0);
+  const timers=useRef<number[]>([]);
   useEffect(()=>{
-    const sync=()=>{
+    const sync=(event?: Event)=>{
       const next=cartCount();
-      if(seen.current&&next>last.current){setBump(true);window.setTimeout(()=>setBump(false),420)}
+      const name=event instanceof CustomEvent&&typeof event.detail?.name==='string'?event.detail.name:'';
+      if(seen.current&&next>last.current){
+        setBump(true);
+        setNotice(name?`${name} added to cart`:'Added to cart');
+        timers.current.forEach(id=>window.clearTimeout(id));
+        timers.current=[window.setTimeout(()=>setBump(false),480),window.setTimeout(()=>setNotice(''),2400)];
+      }
       seen.current=true; last.current=next; setCount(next);
     };
     sync();
-    window.addEventListener('miriax-cart',sync);
-    window.addEventListener('storage',sync);
-    return()=>{window.removeEventListener('miriax-cart',sync);window.removeEventListener('storage',sync)};
+    const onCart=(event: Event)=>sync(event);
+    window.addEventListener('miriax-cart',onCart);
+    window.addEventListener('storage',onCart);
+    return()=>{window.removeEventListener('miriax-cart',onCart);window.removeEventListener('storage',onCart);timers.current.forEach(id=>window.clearTimeout(id))};
   },[]);
-  return <Link to="/ship" className={bump?'nav-cart bump':'nav-cart'} aria-label={count?`Cart, ${count} items`:'Cart'}><ShoppingBag size={18}/><span>{count}</span></Link>;
+  return <><Link to="/ship" className={bump?'nav-cart bump':'nav-cart'} aria-label={count?`Cart, ${count} ${count===1?'item':'items'}`:'Cart'}><ShoppingBag size={18}/><span className="nav-cart-count" aria-hidden="true">{count}</span></Link><p className={notice?'cart-toast show':'cart-toast'} role="status">{notice}</p></>;
 }
 function NotFound(){return <section className="section"><div className="container narrow"><span className="eyebrow">404</span><h1>That page is not here.</h1><p>The link may be old. Start a shipment or track one you already have.</p><div className="actions"><Link className="button" to="/ship">Ship</Link><Link className="text-link" to="/">Home</Link></div></div></section>}
 
@@ -46,7 +55,7 @@ function Shell({children}:{children:React.ReactNode}){
   const {user}=useAuth(); const [open,setOpen]=useState(false); const location=useLocation(); const menuButton=useRef<HTMLButtonElement>(null);
   useEffect(()=>{setOpen(false);window.scrollTo(0,0)},[location.pathname,location.search]);
   useEffect(()=>{if(!open)return;const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape'){setOpen(false);menuButton.current?.focus()}};document.body.style.overflow='hidden';document.addEventListener('keydown',onKeyDown);return()=>{document.body.style.overflow='';document.removeEventListener('keydown',onKeyDown)}},[open]);
-  return <><header className="site-header"><div className="container nav"><Link to="/" className="brand" aria-label="MIRIAX ONE"><span>MIRIAX</span></Link><button ref={menuButton} className="menu" onClick={()=>setOpen(!open)} aria-label={open?'Close navigation':'Open navigation'} aria-expanded={open} aria-controls="primary-navigation">{open?<X/>:<Menu/>}</button><nav id="primary-navigation" className={open?'open':''} onClick={event=>{if((event.target as HTMLElement).closest('a,button'))setOpen(false)}}><NavLink to="/ship">Ship</NavLink><NavLink to="/track">Track</NavLink><NavLink to="/contact">Contact</NavLink>{user?.role==='admin'&&<NavLink to="/admin">Admin</NavLink>}{user?<NavLink to="/account">Account</NavLink>:<NavLink to="/login" className="nav-login">Sign in</NavLink>}<CartLink/>{user&&<SignOutButton/>}</nav></div></header>
+  return <><header className="site-header"><div className="container nav"><Link to="/" className="brand" aria-label="MIRIAX ONE"><span>MIRIAX</span></Link><nav id="primary-navigation" className={open?'open':''} onClick={event=>{if((event.target as HTMLElement).closest('a,button'))setOpen(false)}}><NavLink to="/ship">Ship</NavLink><NavLink to="/track">Track</NavLink><NavLink to="/contact">Contact</NavLink>{user?.role==='admin'&&<NavLink to="/admin">Admin</NavLink>}{user?<NavLink to="/account">Account</NavLink>:<NavLink to="/login" className="nav-login">Sign in</NavLink>}{user&&<SignOutButton/>}</nav><div className="nav-end"><CartLink/><button ref={menuButton} className="menu" onClick={event=>{event.stopPropagation();setOpen(!open)}} aria-label={open?'Close navigation':'Open navigation'} aria-expanded={open} aria-controls="primary-navigation">{open?<X/>:<Menu/>}</button></div></div></header>
     <main>{children}</main><footer><div className="container footer-line"><span>MIRIAX ONE</span><Link to="/about">About</Link><Link to="/services">Services</Link><Link to="/contact">Contact</Link><span>(c) {new Date().getFullYear()}</span></div></footer></>;
 }
 

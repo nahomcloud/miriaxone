@@ -23,8 +23,10 @@ it('closes the mobile menu when a navigation item is chosen', () => {
 it('nudges the cart when an item is added', () => {
   renderAt('/');
   localStorage.setItem('miriax_cart', JSON.stringify([{ qty: 1 }]));
-  act(() => { window.dispatchEvent(new Event('miriax-cart')); });
-  expect(screen.getByRole('link', { name: 'Cart, 1 items' }).className).toContain('bump');
+  act(() => { window.dispatchEvent(new CustomEvent('miriax-cart', { detail: { name: 'Sunflower Bunch' } })); });
+  expect(screen.getByRole('link', { name: 'Cart, 1 item' }).className).toContain('bump');
+  expect(screen.getByRole('status').textContent).toBe('Sunflower Bunch added to cart');
+  expect(document.querySelector('#primary-navigation .nav-cart')).toBeNull();
 });
 
 it('explains a short tracking code and offers contact', async () => {
