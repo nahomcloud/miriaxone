@@ -44,7 +44,14 @@
 .site-header .menu { color: #fff; }
 
 .site-header + main { padding-top: 0; }
-.one-hero, .page-hero, .service-flow-hero {
+.one-hero {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.28) 0%, rgba(0,0,0,.08) 46%, rgba(0,0,0,.38) 100%),
+    var(--one-hero-image, url('/assets/hero.jpg')) center/cover !important;
+  color: #fff !important;
+  min-height: 100svh;
+}
+.page-hero, .service-flow-hero {
   background:
     linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.55)),
     var(--one-hero-image, url('/assets/hero.jpg')) center/cover !important;
@@ -411,17 +418,18 @@ img, video, svg { max-width: 100%; }
   .button, .chip, .flow-tabs button, .menu, button.nav-cart { min-height: 44px; }
 }
 
-section.warm:has(.express-shop) { background: #f5f5f7 !important; }
-.express-shop.flow-layout { gap: 16px !important; align-items: start; }
-.express-shop .gift-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; gap: 16px !important; align-items: stretch; }
-.express-shop .gift-card { display: flex !important; flex-direction: column; height: 100%; overflow: hidden; background: #fff !important; border-radius: 16px !important; }
+section.warm:has(.express-shop) { background: #fff !important; }
+.express-shop.flow-layout { gap: 20px !important; align-items: start; }
+.express-shop .gift-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 16px !important; align-items: stretch; }
+.express-shop .gift-card { display: flex !important; flex-direction: column; height: 100%; overflow: hidden; background: #fff !important; border: 1px solid #e8e8ed !important; border-radius: 16px !important; }
 .express-shop .gift-card .gift-card-actions { margin-top: auto; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding-bottom: 14px; }
 .express-shop .gift-card .gift-card-actions .button { width: 100%; justify-content: center; }
+.express-shop .gift-card .button:disabled { opacity: 1 !important; background: #fff !important; color: #1d1d1f !important; border: 1px solid #1d1d1f !important; cursor: default; }
 .express-shop .gift-card .ghost-action { text-align: center; }
-.express-shop .express-cart { background: #fff !important; border-radius: 16px !important; padding: 20px 18px !important; position: sticky; top: 76px; }
-@media (max-width: 430px) {
-  .express-shop .gift-grid { grid-template-columns: 1fr !important; }
-}
-@media (min-width: 431px) and (max-width: 800px) {
+.express-shop .express-cart { background: #fff !important; border: 1px solid #e8e8ed !important; border-radius: 16px !important; padding: 20px 18px !important; position: sticky; top: 76px; }
+@media (max-width: 1100px) {
   .express-shop .gift-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 640px) {
+  .express-shop .gift-grid { grid-template-columns: 1fr !important; }
 }

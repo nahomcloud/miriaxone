@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, NavLink, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Box, CheckCircle2, Clock3, Gift, Globe2, Headphones, LockKeyhole, Mail, MapPin, Menu, PackageCheck, Search, ShoppingBag, Truck, X } from 'lucide-react';
 import { api, unwrap } from './api';
@@ -50,8 +51,8 @@ function CartLink({ onOpen }: { onOpen: () => void }){
       if(seen.current&&name&&next>last.current){
         setBump(true);
         setNotice(`${name} added to cart`);
-        setDrawer(true);
-        onOpen();
+        const onShop=/service=(express-gifts|ship-barrel)/.test(location.search);
+        if(!onShop){setDrawer(true);onOpen();}
         window.setTimeout(()=>setBump(false),480);
       }
       seen.current=true; last.current=next; setCount(next);
@@ -61,7 +62,7 @@ function CartLink({ onOpen }: { onOpen: () => void }){
     window.addEventListener('miriax-cart',onCart);
     window.addEventListener('storage',onCart);
     return()=>{window.removeEventListener('miriax-cart',onCart);window.removeEventListener('storage',onCart)};
-  },[onOpen]);
+  },[onOpen,location.search]);
   useEffect(()=>{
     if(!drawer)return;
     closeRef.current?.focus();
@@ -82,7 +83,7 @@ function CartLink({ onOpen }: { onOpen: () => void }){
     }}>
       <ShoppingBag size={18}/><span className="nav-cart-count" aria-hidden="true">{count}</span>
     </button>
-    {drawer&&<>
+    {drawer&&createPortal(<>
       <button type="button" className="cart-backdrop" aria-label="Close cart" onClick={()=>setDrawer(false)}/>
       <aside id="cart-drawer" className="cart-drawer" role="dialog" aria-modal="true" aria-label="Cart">
         <div className="cart-drawer-head"><h2>Cart</h2><button ref={closeRef} type="button" onClick={()=>{setDrawer(false);buttonRef.current?.focus()}}>Close</button></div>
@@ -91,7 +92,7 @@ function CartLink({ onOpen }: { onOpen: () => void }){
         {gifts.length>0&&<section><h3>Gifts</h3>{gifts.map((line,index)=><div className="cart-drawer-line" key={`${line.productId}-${line.sizeLabel||index}`}><div><b>{line.name}</b><small>{line.sizeLabel||'Standard'} · {line.qty}</small></div><div><span>{money(line.price*line.qty)}</span><button type="button" aria-label={`Remove ${line.name}`} onClick={()=>saveGiftCart(gifts.filter((_,i)=>i!==index))}>Remove</button></div></div>)}<p className="cart-drawer-total"><span>Gift total</span><b>{money(giftTotal)}</b></p><Link className="button" to="/ship?service=express-gifts" onClick={()=>setDrawer(false)}>Review gifts</Link></section>}
         {barrels.length>0&&<section><h3>Barrel</h3>{barrels.map((line,index)=><div className="cart-drawer-line" key={`${line.item?.id}-${index}`}><div><b>{line.item?.name||'Item'}</b><small>{line.variant?.label||'Base'} · {line.qty}</small></div><div><span>{money((Number(line.variant?.price??line.item?.price)||0)*line.qty)}</span><button type="button" aria-label={`Remove ${line.item?.name||'item'}`} onClick={()=>saveBarrelRows(barrels.filter((_,i)=>i!==index))}>Remove</button></div></div>)}<p className="cart-drawer-total"><span>Barrel items</span><b>{money(barrelTotal)}</b></p><Link className="button" to="/ship?service=ship-barrel" onClick={()=>setDrawer(false)}>Review barrel</Link></section>}
       </aside>
-    </>}
+    </>, document.body)}
   </>;
 }
 function NotFound(){return <section className="section"><div className="container narrow"><span className="eyebrow">404</span><h1>That page is not here.</h1><p>The link may be old. Start a shipment or track one you already have.</p><div className="actions"><Link className="button" to="/ship">Ship</Link><Link className="text-link" to="/">Home</Link></div></div></section>}
