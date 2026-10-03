@@ -33,6 +33,12 @@ it('walks custom cargo one decision at a time', () => {
 });
 
 
+it('confirms a gift was added to the cart', () => {
+  renderShip('/ship?service=express-gifts');
+  fireEvent.click(screen.getAllByRole('button', { name: 'Add to cart' })[0]);
+  expect(screen.getByText(/added/)).toBeTruthy();
+});
+
 it('continue shopping scrolls back to the gift products',()=>{
   const scrollIntoView = vi.fn();
   Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });

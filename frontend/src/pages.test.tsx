@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './auth';
@@ -10,6 +10,22 @@ function renderAt(path: string) {
   vi.stubGlobal('scrollTo', vi.fn());
   render(<MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AuthProvider><App /></AuthProvider></MemoryRouter>);
 }
+
+it('closes the mobile menu when a navigation item is chosen', () => {
+  renderAt('/ship');
+  fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+  const menu = document.getElementById('primary-navigation');
+  expect(menu?.className).toContain('open');
+  fireEvent.click(screen.getByRole('link', { name: 'Ship' }));
+  expect(menu?.className).not.toContain('open');
+});
+
+it('nudges the cart when an item is added', () => {
+  renderAt('/');
+  localStorage.setItem('miriax_cart', JSON.stringify([{ qty: 1 }]));
+  act(() => { window.dispatchEvent(new Event('miriax-cart')); });
+  expect(screen.getByRole('link', { name: 'Cart, 1 items' }).className).toContain('bump');
+});
 
 it('explains a short tracking code and offers contact', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ message: 'not found' }), { status: 404, headers: { 'content-type': 'application/json' } })));

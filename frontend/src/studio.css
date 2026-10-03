@@ -261,3 +261,17 @@ section.warm:has(.express-shop) { background: #ececee; }
 .gift-card-top b { background: #f5f5f7 !important; color: #111 !important; font-size: 11px !important; }
 .metrics > a b, .metrics > div b { color: #111; font-size: 28px; }
 .metrics > a span, .metrics > div span { color: #6e6e73; font-size: 13px; }
+
+.express-cart, .barrel-cart { background: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; padding: 4px 0 0 !important; }
+.cart-added { margin: 0 0 10px; color: #111; font-size: 13px; font-weight: 600; }
+.gift-line.just-added { animation: line-in .6s ease; }
+@keyframes line-in { from { background: #f3f3f4; } to { background: transparent; } }
+.nav-cart span { background: transparent !important; color: #fff !important; min-width: 0; height: auto; padding: 0; font-size: 12px; }
+.nav-cart.bump { animation: cart-bump .42s ease; }
+@keyframes cart-bump { 0% { transform: scale(1); } 40% { transform: scale(1.16); } 100% { transform: scale(1); } }
+@media (max-width: 850px) {
+  .site-header .nav nav.open a, .site-header .nav nav.open button { min-height: 44px; display: inline-flex; align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-cart.bump, .gift-line.just-added { animation: none; }
+}
