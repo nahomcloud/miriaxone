@@ -223,6 +223,11 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(order['cart']['formData']['serviceKey'], 'express-gifts')
         tampered = payload | {'items': [payload['items'][0] | {'price': 1}], 'submittedTotal': 2}
         self.assertEqual(self.client.post('/site/gift-checkout', headers=self.headers, json=tampered).status_code, 422)
+        self.assertEqual(self.client.post('/site/gift-checkout', json=payload).status_code, 422)
+        guest = self.client.post('/site/gift-checkout', json=payload | {'email': 'guest@example.com'})
+        self.assertEqual(guest.status_code, 200, guest.text)
+        self.assertEqual(self.db.orders.records[-1]['email'], 'guest@example.com')
+        self.assertNotIn('userId', self.db.orders.records[-1])
 
     def test_public_contact_validates_and_initializes_handling_status(self):
         response=self.client.post('/contact-us',json=self.payloads['contact-us'])

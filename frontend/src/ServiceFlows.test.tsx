@@ -2,11 +2,12 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ServiceFlowRouter from './ServiceFlows';
+import { AuthProvider } from './auth';
 
 afterEach(()=>{cleanup();localStorage.clear();vi.restoreAllMocks()});
 
 function renderShip(initialEntry='/ship'){
-  render(<MemoryRouter initialEntries={[initialEntry]} future={{v7_startTransition:true,v7_relativeSplatPath:true}}><Routes><Route path="/ship" element={<ServiceFlowRouter/>}/></Routes></MemoryRouter>);
+  render(<MemoryRouter initialEntries={[initialEntry]} future={{v7_startTransition:true,v7_relativeSplatPath:true}}><AuthProvider><Routes><Route path="/ship" element={<ServiceFlowRouter/>}/></Routes></AuthProvider></MemoryRouter>);
 }
 
 it('changes service flow immediately when a service card changes only the query string',()=>{
@@ -45,7 +46,28 @@ it('creates a gift order without asking for a card',()=>{
   renderShip('/ship?service=express-gifts');
   fireEvent.click(screen.getByRole('button',{name:'Review gift order'}));
   expect(screen.queryByPlaceholderText('Name on card')).toBeNull();
+  expect(screen.queryByRole('button',{name:'Create gift order'})).toBeNull();
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'guest@example.com' } });
+  fireEvent.click(screen.getByRole('button',{name:'Continue as guest'}));
+  fireEvent.change(screen.getByLabelText('Recipient name'), { target: { value: 'Family' } });
+  fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Addis Ababa' } });
+  fireEvent.change(screen.getByLabelText('Street'), { target: { value: 'Bole' } });
+  fireEvent.change(screen.getByLabelText('Recipient phone'), { target: { value: '251911000000' } });
+  fireEvent.click(screen.getByRole('button',{name:'Continue to review'}));
   expect((screen.getByRole('button',{name:'Create gift order'}) as HTMLButtonElement).disabled).toBe(false);
+  expect(screen.queryByPlaceholderText('Name on card')).toBeNull();
+});
+
+it('lets a signed-in customer skip the guest email', async () => {
+  localStorage.setItem('habeshaline_token', 'token');
+  localStorage.setItem('miriax_cart', JSON.stringify([{productId:'sunflwr',name:'Sunflower Bunch (10)',qty:1,price:40,delivery:'Same Day'}]));
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(String(url).includes('/auth/me') ? { _id: 'u1', name: 'Nahom', email: 'nahom@example.com', username: 'nahom', role: 'customer', countryCode: 'US', mobile: '7035550100' } : {}), { status: 200, headers: { 'content-type': 'application/json' } })));
+  renderShip('/ship?service=express-gifts');
+  fireEvent.click(await screen.findByRole('button', { name: 'Review gift order' }));
+  expect(await screen.findByRole('heading', { name: 'Checking out as Nahom' })).toBeTruthy();
+  expect(screen.queryByLabelText('Email')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  expect(screen.getByRole('heading', { name: 'Where should it go?' })).toBeTruthy();
 });
 
 

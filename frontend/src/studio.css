@@ -205,3 +205,7 @@ section.warm:has(.express-shop) { background: #ececee; }
 .auth-card .button { background: #111 !important; color: #fff !important; border-radius: 999px; min-height: 48px; width: 100%; }
 .auth-card .button:hover { background: #333 !important; transform: none; }
 .auth-card a { color: #111; text-decoration: underline; text-underline-offset: 3px; }
+
+.checkout-steps { display: flex; gap: 14px; list-style: none; padding: 0; margin: 0 0 14px; }
+.checkout-steps button { border: 0; background: transparent; color: #6e6e73; font: 600 12px Satoshi, sans-serif; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; padding: 0; }
+.checkout-steps .active button { color: #111; }
