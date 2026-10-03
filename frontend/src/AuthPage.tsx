@@ -24,9 +24,9 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     try { await authenticate(mode, data); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   return <section className="auth"><div className="panel auth-card">
-    <Link to="/" className="brand"><span>MIRIAX <span>ONE</span></span></Link>
     <span className="eyebrow">{registering ? 'Join MIRIAX ONE' : 'Welcome back'}</span>
     <h1>{registering ? 'Create your account' : 'Sign in to your account'}</h1>
+    <p className="auth-note">{registering ? 'This account is for tracking and repeat shipments.' : 'Use the email and password for your MIRIAX ONE account.'}</p>
     <form className="form" onSubmit={submit}>
       {registering && <>
         <label htmlFor="auth-name">Full name</label><input id="auth-name" name="name" required maxLength={100} autoComplete="name"/>
