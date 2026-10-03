@@ -227,7 +227,16 @@ class AdminTests(unittest.TestCase):
         guest = self.client.post('/site/gift-checkout', json=payload | {'email': 'guest@example.com'})
         self.assertEqual(guest.status_code, 200, guest.text)
         self.assertEqual(self.db.orders.records[-1]['email'], 'guest@example.com')
+        self.assertEqual(self.db.orders.records[-1]['cart']['formData']['paymentMethod'], 'later')
         self.assertNotIn('userId', self.db.orders.records[-1])
+        mobile = self.client.post('/site/gift-checkout', json=payload | {'email': 'guest@example.com', 'paymentMethod': 'mobile', 'paymentProvider': 'Telebirr', 'paymentPhone': '+251 911 223344', 'cardNumber': '4242424242424242'})
+        self.assertEqual(mobile.status_code, 422)
+        mobile_ok = self.client.post('/site/gift-checkout', json=payload | {'email': 'guest@example.com', 'paymentMethod': 'mobile', 'paymentProvider': 'Telebirr', 'paymentPhone': '+251 911 223344'})
+        self.assertEqual(mobile_ok.status_code, 200, mobile_ok.text)
+        saved = self.db.orders.records[-1]['cart']['formData']
+        self.assertEqual(saved['paymentMethod'], 'mobile')
+        self.assertEqual(saved['paymentPhone'], '251911223344')
+        self.assertNotIn('cardNumber', saved)
 
     def test_public_contact_validates_and_initializes_handling_status(self):
         response=self.client.post('/contact-us',json=self.payloads['contact-us'])

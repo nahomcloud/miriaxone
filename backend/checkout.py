@@ -80,12 +80,23 @@ def install(app, database, optional_user, admin_user):
         email = str(user.get("email", "")).strip() if user else str(payload.get("email", "")).strip()
         if "@" not in email or "." not in email.split("@")[-1] or len(email) > 254:
             raise HTTPException(422, "A valid email is required")
+        method = str(payload.get("paymentMethod") or "later").strip()
+        if method not in {"card", "mobile", "later"}:
+            raise HTTPException(422, "Choose a payment method")
+        if any(key in payload for key in ("cardNumber", "cvv", "cvc", "pan")):
+            raise HTTPException(422, "Card numbers are not accepted on this form")
+        provider = str(payload.get("paymentProvider") or "").strip()[:40]
+        payment_phone = "".join(ch for ch in str(payload.get("paymentPhone") or "") if ch.isdigit())[:20]
+        if method == "mobile" and len(payment_phone) < 7:
+            raise HTTPException(422, "Add the mobile money number")
+        if method != "mobile":
+            provider, payment_phone = "", ""
         occasion = str(payload.get("occasion", "")).strip()[:80]
         surprise_note = str(payload.get("surpriseNote", "")).strip()[:1000]
         now = datetime.now(timezone.utc)
         order = {"name": f"Express Gifts for {address['recipient']}", "email": email, "price": float(total), "status": "pending", "isPaid": 0, "txnId": "",
                  "createdAt": now, "updatedAt": now, "files": {},
-                 "cart": {"formData": {"serviceKey": "express-gifts", "recipient": address["recipient"], "city": address["city"], "address": address["address"], "phone": address["phone"], "instructions": payload.get("instructions", ""), "occasion": occasion, "surpriseNote": surprise_note}, "cartData": {"cartItems": lines}, "total": float(total)}}
+                 "cart": {"formData": {"serviceKey": "express-gifts", "recipient": address["recipient"], "city": address["city"], "address": address["address"], "phone": address["phone"], "instructions": payload.get("instructions", ""), "occasion": occasion, "surpriseNote": surprise_note, "paymentMethod": method, "paymentProvider": provider, "paymentPhone": payment_phone}, "cartData": {"cartItems": lines}, "total": float(total)}}
         if user:
             order["userId"] = str(user["_id"])
         result = await db.orders.insert_one(order)

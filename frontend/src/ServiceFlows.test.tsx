@@ -53,6 +53,10 @@ it('creates a gift order without asking for a card',()=>{
   fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Addis Ababa' } });
   fireEvent.change(screen.getByLabelText('Street'), { target: { value: 'Bole' } });
   fireEvent.change(screen.getByLabelText('Recipient phone'), { target: { value: '251911000000' } });
+  fireEvent.click(screen.getByRole('button',{name:'Continue to payment'}));
+  expect(screen.getByRole('heading',{name:'How will you pay?'})).toBeTruthy();
+  expect(screen.queryByPlaceholderText('Name on card')).toBeNull();
+  expect(screen.queryByLabelText('Card number')).toBeNull();
   fireEvent.click(screen.getByRole('button',{name:'Continue to review'}));
   expect((screen.getByRole('button',{name:'Create gift order'}) as HTMLButtonElement).disabled).toBe(false);
   expect(screen.queryByPlaceholderText('Name on card')).toBeNull();
@@ -68,6 +72,25 @@ it('lets a signed-in customer skip the guest email', async () => {
   expect(screen.queryByLabelText('Email')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
   expect(screen.getByRole('heading', { name: 'Where should it go?' })).toBeTruthy();
+});
+
+it('asks for a mobile money number before review', () => {
+  localStorage.setItem('miriax_cart', JSON.stringify([{productId:'sunflwr',name:'Sunflower Bunch (10)',qty:1,price:40,delivery:'Same Day'}]));
+  renderShip('/ship?service=express-gifts');
+  fireEvent.click(screen.getByRole('button',{name:'Review gift order'}));
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'guest@example.com' } });
+  fireEvent.click(screen.getByRole('button',{name:'Continue as guest'}));
+  fireEvent.change(screen.getByLabelText('Recipient name'), { target: { value: 'Family' } });
+  fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Addis Ababa' } });
+  fireEvent.change(screen.getByLabelText('Street'), { target: { value: 'Bole' } });
+  fireEvent.change(screen.getByLabelText('Recipient phone'), { target: { value: '251911000000' } });
+  fireEvent.click(screen.getByRole('button',{name:'Continue to payment'}));
+  fireEvent.click(screen.getByRole('button',{name:'Mobile money'}));
+  fireEvent.click(screen.getByRole('button',{name:'Continue to review'}));
+  expect(screen.getByText('Add the mobile money number.')).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Mobile money number'), { target: { value: '251911223344' } });
+  fireEvent.click(screen.getByRole('button',{name:'Continue to review'}));
+  expect(screen.getByText(/Telebirr 251911223344/)).toBeTruthy();
 });
 
 
