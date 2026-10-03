@@ -9,6 +9,7 @@ import AdminPanel from './AdminPanel';
 import Auth from './AuthPage';
 import OneHome from './OneHome';
 import ServiceFlowRouter from './ServiceFlows';
+import { loadGiftCart, money, saveGiftCart, type GiftCartItem } from './catalog';
 
 const services=[
   {slug:'ship-barrel',icon:PackageCheck,title:'Ship a Barrel',text:'Catalog-based barrel packing with item photos, size options, explanations, and dimensional weight guidance.',image:pageImage('barrelHero')},
@@ -21,22 +22,36 @@ function cartCount(){
   const qty=(raw:string|null)=>{try{const rows=JSON.parse(raw||'[]');return Array.isArray(rows)?rows.reduce((sum,row)=>sum+Number(row?.qty||0),0):0}catch{return 0}};
   return qty(localStorage.getItem('miriax_barrel_cart'))+qty(localStorage.getItem('miriax_cart'));
 }
-function CartLink(){
+type BarrelRow = { item: { id: string; name: string; price: number }; variant?: { id?: string; label?: string; price?: number }; qty: number };
+function loadBarrelRows(): BarrelRow[] {
+  try { const rows = JSON.parse(localStorage.getItem('miriax_barrel_cart') || '[]'); return Array.isArray(rows) ? rows : []; } catch { return []; }
+}
+function saveBarrelRows(rows: BarrelRow[]) { localStorage.setItem('miriax_barrel_cart', JSON.stringify(rows)); window.dispatchEvent(new CustomEvent('miriax-cart', { detail: {} })); }
+function CartLink({ onOpen }: { onOpen: () => void }){
+  const location = useLocation();
   const [count,setCount]=useState(0);
   const [bump,setBump]=useState(false);
   const [notice,setNotice]=useState('');
+  const [drawer,setDrawer]=useState(false);
+  const [gifts,setGifts]=useState<GiftCartItem[]>([]);
+  const [barrels,setBarrels]=useState<BarrelRow[]>([]);
   const seen=useRef(false);
   const last=useRef(0);
-  const timers=useRef<number[]>([]);
+  const buttonRef=useRef<HTMLButtonElement>(null);
+  const closeRef=useRef<HTMLButtonElement>(null);
+  useEffect(()=>{setDrawer(false)},[location.pathname,location.search]);
   useEffect(()=>{
     const sync=(event?: Event)=>{
       const next=cartCount();
       const name=event instanceof CustomEvent&&typeof event.detail?.name==='string'?event.detail.name:'';
-      if(seen.current&&next>last.current){
+      setGifts(loadGiftCart());
+      setBarrels(loadBarrelRows());
+      if(seen.current&&name&&next>last.current){
         setBump(true);
-        setNotice(name?`${name} added to cart`:'Added to cart');
-        timers.current.forEach(id=>window.clearTimeout(id));
-        timers.current=[window.setTimeout(()=>setBump(false),480),window.setTimeout(()=>setNotice(''),2400)];
+        setNotice(`${name} added to cart`);
+        setDrawer(true);
+        onOpen();
+        window.setTimeout(()=>setBump(false),480);
       }
       seen.current=true; last.current=next; setCount(next);
     };
@@ -44,9 +59,32 @@ function CartLink(){
     const onCart=(event: Event)=>sync(event);
     window.addEventListener('miriax-cart',onCart);
     window.addEventListener('storage',onCart);
-    return()=>{window.removeEventListener('miriax-cart',onCart);window.removeEventListener('storage',onCart);timers.current.forEach(id=>window.clearTimeout(id))};
-  },[]);
-  return <><Link to="/ship" className={bump?'nav-cart bump':'nav-cart'} aria-label={count?`Cart, ${count} ${count===1?'item':'items'}`:'Cart'}><ShoppingBag size={18}/><span className="nav-cart-count" aria-hidden="true">{count}</span></Link><p className={notice?'cart-toast show':'cart-toast'} role="status">{notice}</p></>;
+    return()=>{window.removeEventListener('miriax-cart',onCart);window.removeEventListener('storage',onCart)};
+  },[onOpen]);
+  useEffect(()=>{
+    if(!drawer)return;
+    closeRef.current?.focus();
+    const onKey=(event: KeyboardEvent)=>{if(event.key==='Escape'){setDrawer(false);buttonRef.current?.focus()}};
+    document.addEventListener('keydown',onKey);
+    return()=>document.removeEventListener('keydown',onKey);
+  },[drawer]);
+  const giftTotal=gifts.reduce((sum,line)=>sum+Number(line.price||0)*Number(line.qty||0),0);
+  const barrelTotal=barrels.reduce((sum,line)=>sum+(Number(line.variant?.price??line.item?.price)||0)*Number(line.qty||0),0);
+  return <>
+    <button ref={buttonRef} type="button" className={bump?'nav-cart bump':'nav-cart'} aria-label={count?`Cart, ${count} ${count===1?'item':'items'}`:'Cart'} aria-expanded={drawer} aria-controls="cart-drawer" onClick={()=>{setDrawer(value=>!value);onOpen()}}>
+      <ShoppingBag size={18}/><span className="nav-cart-count" aria-hidden="true">{count}</span>
+    </button>
+    {drawer&&<>
+      <button type="button" className="cart-backdrop" aria-label="Close cart" onClick={()=>setDrawer(false)}/>
+      <aside id="cart-drawer" className="cart-drawer" role="dialog" aria-modal="true" aria-label="Cart">
+        <div className="cart-drawer-head"><h2>Cart</h2><button ref={closeRef} type="button" onClick={()=>{setDrawer(false);buttonRef.current?.focus()}}>Close</button></div>
+        <p className="cart-added" role="status">{notice}</p>
+        {!gifts.length&&!barrels.length&&<p>Your cart is empty.</p>}
+        {gifts.length>0&&<section><h3>Gifts</h3>{gifts.map((line,index)=><div className="cart-drawer-line" key={`${line.productId}-${line.sizeLabel||index}`}><div><b>{line.name}</b><small>{line.sizeLabel||'Standard'} · {line.qty}</small></div><div><span>{money(line.price*line.qty)}</span><button type="button" aria-label={`Remove ${line.name}`} onClick={()=>saveGiftCart(gifts.filter((_,i)=>i!==index))}>Remove</button></div></div>)}<p className="cart-drawer-total"><span>Gift total</span><b>{money(giftTotal)}</b></p><Link className="button" to="/ship?service=express-gifts" onClick={()=>setDrawer(false)}>Review gifts</Link></section>}
+        {barrels.length>0&&<section><h3>Barrel</h3>{barrels.map((line,index)=><div className="cart-drawer-line" key={`${line.item?.id}-${index}`}><div><b>{line.item?.name||'Item'}</b><small>{line.variant?.label||'Base'} · {line.qty}</small></div><div><span>{money((Number(line.variant?.price??line.item?.price)||0)*line.qty)}</span><button type="button" aria-label={`Remove ${line.item?.name||'item'}`} onClick={()=>saveBarrelRows(barrels.filter((_,i)=>i!==index))}>Remove</button></div></div>)}<p className="cart-drawer-total"><span>Barrel items</span><b>{money(barrelTotal)}</b></p><Link className="button" to="/ship?service=ship-barrel" onClick={()=>setDrawer(false)}>Review barrel</Link></section>}
+      </aside>
+    </>}
+  </>;
 }
 function NotFound(){return <section className="section"><div className="container narrow"><span className="eyebrow">404</span><h1>That page is not here.</h1><p>The link may be old. Start a shipment or track one you already have.</p><div className="actions"><Link className="button" to="/ship">Ship</Link><Link className="text-link" to="/">Home</Link></div></div></section>}
 
@@ -55,7 +93,7 @@ function Shell({children}:{children:React.ReactNode}){
   const {user}=useAuth(); const [open,setOpen]=useState(false); const location=useLocation(); const menuButton=useRef<HTMLButtonElement>(null);
   useEffect(()=>{setOpen(false);window.scrollTo(0,0)},[location.pathname,location.search]);
   useEffect(()=>{if(!open)return;const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape'){setOpen(false);menuButton.current?.focus()}};document.body.style.overflow='hidden';document.addEventListener('keydown',onKeyDown);return()=>{document.body.style.overflow='';document.removeEventListener('keydown',onKeyDown)}},[open]);
-  return <><header className="site-header"><div className="container nav"><Link to="/" className="brand" aria-label="MIRIAX ONE"><span>MIRIAX</span></Link><nav id="primary-navigation" className={open?'open':''} onClick={event=>{if((event.target as HTMLElement).closest('a,button'))setOpen(false)}}><NavLink to="/ship">Ship</NavLink><NavLink to="/track">Track</NavLink><NavLink to="/contact">Contact</NavLink>{user?.role==='admin'&&<NavLink to="/admin">Admin</NavLink>}{user?<NavLink to="/account">Account</NavLink>:<NavLink to="/login" className="nav-login">Sign in</NavLink>}{user&&<SignOutButton/>}</nav><div className="nav-end"><CartLink/><button ref={menuButton} className="menu" onClick={event=>{event.stopPropagation();setOpen(!open)}} aria-label={open?'Close navigation':'Open navigation'} aria-expanded={open} aria-controls="primary-navigation">{open?<X/>:<Menu/>}</button></div></div></header>
+  return <><header className="site-header"><div className="container nav"><Link to="/" className="brand" aria-label="MIRIAX ONE"><span>MIRIAX</span></Link><nav id="primary-navigation" className={open?'open':''} onClick={event=>{if((event.target as HTMLElement).closest('a,button'))setOpen(false)}}><NavLink to="/ship">Ship</NavLink><NavLink to="/track">Track</NavLink><NavLink to="/contact">Contact</NavLink>{user?.role==='admin'&&<NavLink to="/admin">Admin</NavLink>}{user?<NavLink to="/account">Account</NavLink>:<NavLink to="/login" className="nav-login">Sign in</NavLink>}{user&&<SignOutButton/>}</nav><div className="nav-end"><CartLink onOpen={()=>setOpen(false)}/><button ref={menuButton} className="menu" onClick={event=>{event.stopPropagation();setOpen(!open)}} aria-label={open?'Close navigation':'Open navigation'} aria-expanded={open} aria-controls="primary-navigation">{open?<X/>:<Menu/>}</button></div></div></header>
     <main>{children}</main><footer><div className="container footer-line"><span>MIRIAX ONE</span><Link to="/about">About</Link><Link to="/services">Services</Link><Link to="/contact">Contact</Link><span>(c) {new Date().getFullYear()}</span></div></footer></>;
 }
 

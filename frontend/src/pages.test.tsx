@@ -24,9 +24,18 @@ it('nudges the cart when an item is added', () => {
   renderAt('/');
   localStorage.setItem('miriax_cart', JSON.stringify([{ qty: 1 }]));
   act(() => { window.dispatchEvent(new CustomEvent('miriax-cart', { detail: { name: 'Sunflower Bunch' } })); });
-  expect(screen.getByRole('link', { name: 'Cart, 1 item' }).className).toContain('bump');
+  expect(screen.getByRole('button', { name: 'Cart, 1 item' }).className).toContain('bump');
+  expect(screen.getByRole('dialog', { name: 'Cart' })).toBeTruthy();
   expect(screen.getByRole('status').textContent).toBe('Sunflower Bunch added to cart');
   expect(document.querySelector('#primary-navigation .nav-cart')).toBeNull();
+});
+
+it('opens the cart from the bag and lists what was added', () => {
+  localStorage.setItem('miriax_cart', JSON.stringify([{ productId: 'sunflwr', name: 'Sunflower Bunch (10)', qty: 1, price: 40 }]));
+  renderAt('/');
+  fireEvent.click(screen.getByRole('button', { name: 'Cart, 1 item' }));
+  expect(screen.getByRole('dialog', { name: 'Cart' }).textContent).toContain('Sunflower Bunch (10)');
+  expect(screen.getByRole('link', { name: 'Review gifts' }).getAttribute('href')).toBe('/ship?service=express-gifts');
 });
 
 it('explains a short tracking code and offers contact', async () => {
