@@ -275,3 +275,64 @@ section.warm:has(.express-shop) { background: #ececee; }
 @media (prefers-reduced-motion: reduce) {
   .nav-cart.bump, .gift-line.just-added { animation: none; }
 }
+
+html, body, .admin-shell, .section, .panel, button, input, select, textarea, a {
+  font-family: Satoshi, "Avenir Next", "Segoe UI", sans-serif !important;
+}
+html, body { background: #fff !important; color: #1d1d1f !important; }
+h1, h2, h3, h4 { font-family: Satoshi, sans-serif !important; font-weight: 500 !important; letter-spacing: -0.035em !important; }
+h1 em, .one-hero h1 em { color: inherit !important; font-style: normal !important; }
+.section { background: #f5f5f7 !important; padding: 88px 0 !important; }
+.section.muted, section.warm { background: #fff !important; }
+.panel, .flow-card, .service, .service-choice-card, .flow-section, .catalog-card, .admin-panel, .track-strip > .container {
+  background: #fff !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+}
+.service, .service-choice-card, .flow-card { transition: transform .4s ease; }
+.service:hover, .service-choice-card:hover { transform: scale(1.015); }
+.button, .ghost-cta, .chip, .flow-tabs button { transition: background-color .2s ease, color .2s ease, opacity .2s ease !important; }
+.button:hover, .ghost-cta:hover, .light-action:hover { transform: none !important; }
+.form input, .form select, .form textarea, .mini-form input, .custom-flow input, .custom-flow select, .custom-flow textarea, .shop-toolbar input, .shop-toolbar select, .admin-main input, .admin-main select, .admin-main textarea {
+  border-radius: 12px !important;
+  border: 1px solid #d2d2d7 !important;
+  background: #fff !important;
+  min-height: 48px;
+}
+.form input:focus, .form select:focus, .form textarea:focus, .mini-form input:focus, .custom-flow input:focus, .custom-flow select:focus, .admin-main input:focus, .admin-main select:focus, .admin-main textarea:focus {
+  border-color: #1d1d1f !important;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0,0,0,.08);
+}
+.site-header .brand, .site-header nav a, .site-header .nav-login {
+  text-transform: none !important;
+  letter-spacing: -0.01em !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+.site-header .brand { text-transform: uppercase !important; letter-spacing: .18em !important; font-weight: 600 !important; font-size: 13px !important; }
+.site-header ~ footer { background: #f5f5f7 !important; color: #6e6e73 !important; }
+.site-header ~ footer .footer-line span, .site-header ~ footer .footer-line a, .site-header ~ footer a {
+  color: #6e6e73 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 12px !important;
+}
+body:has(.one-hero) header .nav nav.open, .site-header .nav nav.open {
+  background: rgba(0,0,0,.92) !important;
+  color: #fff !important;
+  backdrop-filter: blur(24px);
+}
+body:has(.one-hero) header .nav nav.open a,
+body:has(.one-hero) header .nav nav.open button,
+body:has(.one-hero) header .nav nav.open .nav-login,
+.site-header .nav nav.open a,
+.site-header .nav nav.open button { color: #fff !important; }
+:focus-visible { outline: 2px solid #1d1d1f; outline-offset: 3px; }
+.site-header :focus-visible, .one-hero :focus-visible, .page-hero :focus-visible { outline-color: #fff; }
+.express-cart, .barrel-cart { background: transparent !important; border-radius: 0 !important; }
+@media (prefers-reduced-motion: reduce) {
+  .service, .service-choice-card, .flow-card, .button, .ghost-cta { transition: none !important; }
+  .service:hover, .service-choice-card:hover { transform: none; }
+}
