@@ -365,3 +365,10 @@ button.nav-cart { position: relative; z-index: 60; min-width: 44px; min-height: 
 .cart-drawer-line small { display: block; color: #6e6e73; font-size: 13px; }
 .cart-drawer-total { display: flex; justify-content: space-between; margin: 12px 0; }
 .cart-drawer .button { width: 100%; display: inline-flex; justify-content: center; margin-top: 8px; background: #111 !important; color: #fff !important; }
+
+.cart-drawer, .cart-drawer * { color: #1d1d1f !important; }
+.cart-drawer .button { background: #111 !important; color: #fff !important; }
+@media (max-width: 980px) {
+  .show-cart { display: flex !important; flex-direction: column; }
+  .show-cart .express-cart, .show-cart .barrel-cart { order: -1; background: #fff !important; border-radius: 18px !important; padding: 18px !important; scroll-margin-top: 72px; }
+}

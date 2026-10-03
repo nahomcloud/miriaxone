@@ -29,6 +29,7 @@ function loadBarrelRows(): BarrelRow[] {
 function saveBarrelRows(rows: BarrelRow[]) { localStorage.setItem('miriax_barrel_cart', JSON.stringify(rows)); window.dispatchEvent(new CustomEvent('miriax-cart', { detail: {} })); }
 function CartLink({ onOpen }: { onOpen: () => void }){
   const location = useLocation();
+  const navigate = useNavigate();
   const [count,setCount]=useState(0);
   const [bump,setBump]=useState(false);
   const [notice,setNotice]=useState('');
@@ -71,7 +72,14 @@ function CartLink({ onOpen }: { onOpen: () => void }){
   const giftTotal=gifts.reduce((sum,line)=>sum+Number(line.price||0)*Number(line.qty||0),0);
   const barrelTotal=barrels.reduce((sum,line)=>sum+(Number(line.variant?.price??line.item?.price)||0)*Number(line.qty||0),0);
   return <>
-    <button ref={buttonRef} type="button" className={bump?'nav-cart bump':'nav-cart'} aria-label={count?`Cart, ${count} ${count===1?'item':'items'}`:'Cart'} aria-expanded={drawer} aria-controls="cart-drawer" onClick={()=>{setDrawer(value=>!value);onOpen()}}>
+    <button ref={buttonRef} type="button" className={bump?'nav-cart bump':'nav-cart'} aria-label={count?`Cart, ${count} ${count===1?'item':'items'}`:'Cart'} aria-expanded={drawer} aria-controls="cart-drawer" onClick={()=>{
+      onOpen();
+      const giftLines=loadGiftCart();
+      const barrelLines=loadBarrelRows();
+      if(giftLines.length){setDrawer(false);navigate('/ship?service=express-gifts&cart=open');return;}
+      if(barrelLines.length){setDrawer(false);navigate('/ship?service=ship-barrel&cart=open');return;}
+      setDrawer(true);
+    }}>
       <ShoppingBag size={18}/><span className="nav-cart-count" aria-hidden="true">{count}</span>
     </button>
     {drawer&&<>

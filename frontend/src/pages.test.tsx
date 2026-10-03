@@ -34,8 +34,9 @@ it('opens the cart from the bag and lists what was added', () => {
   localStorage.setItem('miriax_cart', JSON.stringify([{ productId: 'sunflwr', name: 'Sunflower Bunch (10)', qty: 1, price: 40 }]));
   renderAt('/');
   fireEvent.click(screen.getByRole('button', { name: 'Cart, 1 item' }));
-  expect(screen.getByRole('dialog', { name: 'Cart' }).textContent).toContain('Sunflower Bunch (10)');
-  expect(screen.getByRole('link', { name: 'Review gifts' }).getAttribute('href')).toBe('/ship?service=express-gifts');
+  expect(screen.getByRole('heading', { name: '1 in cart' })).toBeTruthy();
+  expect(document.getElementById('gift-cart')?.textContent).toContain('Sunflower Bunch (10)');
+  expect(screen.getByRole('button', { name: 'Review gift order' })).toBeTruthy();
 });
 
 it('explains a short tracking code and offers contact', async () => {
