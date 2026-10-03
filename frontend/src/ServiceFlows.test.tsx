@@ -59,3 +59,25 @@ it('asks for barrel size and adds starter barrel examples',async()=>{
   expect(screen.getByRole('heading',{name:'5 items'})).toBeTruthy();
   expect(screen.getAllByText('Teff Flour (5 lb bag)').length).toBeGreaterThan(1);
 });
+
+it('searches the gift shop and sorts by price', () => {
+  renderShip('/ship?service=express-gifts');
+  fireEvent.change(screen.getByLabelText('Search gifts'), { target: { value: 'rose' } });
+  expect(screen.getByRole('heading', { name: 'Red Roses (12 stems)', level: 3 })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Celebration Cake', level: 3 })).toBeNull();
+  fireEvent.change(screen.getByLabelText('Search gifts'), { target: { value: '' } });
+  fireEvent.change(screen.getByLabelText('Sort gifts'), { target: { value: 'price-asc' } });
+  const names = screen.getAllByRole('heading', { level: 3 }).map(node => node.textContent);
+  expect(names[0]).toBe('Ethiopian Coffee Gift Box');
+});
+
+it('opens a gift, changes quantity, and adds that size to the cart', () => {
+  renderShip('/ship?service=express-gifts');
+  fireEvent.click(screen.getByRole('button', { name: 'View Red Roses (12 stems)' }));
+  expect(screen.getByRole('heading', { name: 'Red Roses (12 stems)', level: 2 })).toBeTruthy();
+  fireEvent.click(screen.getAllByRole('button', { name: /Deluxe/ })[0]);
+  fireEvent.click(screen.getByRole('button', { name: 'Increase quantity' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add 2 to cart' }));
+  expect(screen.getByText('2 in cart')).toBeTruthy();
+  expect(screen.getByText('Deluxe / Same Day')).toBeTruthy();
+});

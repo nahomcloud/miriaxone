@@ -166,10 +166,18 @@ function CheckoutFields({ onSubmit, button, disabled = false }: { onSubmit: (e: 
   return <form className="mini-form" onSubmit={onSubmit}><input required name="name" placeholder="Your name" autoComplete="name"/><input required name="phone" type="tel" placeholder="Phone" autoComplete="tel"/><input required name="origin" placeholder="Pickup / origin address"/><input required name="delivery" placeholder="Delivery address"/><input required name="email" type="email" placeholder="Email" autoComplete="email"/><button className="button" disabled={disabled}>{button} <ArrowRight size={16}/></button></form>;
 }
 
+function giftFloor(item: CatalogItem) {
+  return item.variants.length ? Math.min(...item.variants.map(variant => variant.price)) : item.price;
+}
+
 function ExpressGiftsFlow() {
   const productListRef = useRef<HTMLDivElement>(null);
   const [category, setCategory] = useState('All');
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState('featured');
   const [selected, setSelected] = useState<Record<string, string>>({});
+  const [viewId, setViewId] = useState('');
+  const [detailQty, setDetailQty] = useState(1);
   const [cart, setCart] = useState<GiftCartItem[]>(loadGiftCart);
   const [checkout, setCheckout] = useState(false);
   const [addresses, setAddresses] = useState<GiftAddress[]>(loadGiftAddresses);
@@ -183,11 +191,37 @@ function ExpressGiftsFlow() {
   const [busy, setBusy] = useState(false);
   const catalog = itemsFor('express-gifts');
   const categories = ['All', ...Array.from(new Set(catalog.map(item => item.category)))];
-  const filtered = category === 'All' ? catalog : catalog.filter(item => item.category === category);
-  const subtotal = cart.reduce((s, l) => s + l.price * l.qty, 0);
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    let list = category === 'All' ? catalog : catalog.filter(item => item.category === category);
+    if (needle) list = list.filter(item => `${item.name} ${item.category}`.toLowerCase().includes(needle));
+    if (sort === 'price-asc') list = [...list].sort((a, b) => giftFloor(a) - giftFloor(b));
+    if (sort === 'price-desc') list = [...list].sort((a, b) => giftFloor(b) - giftFloor(a));
+    if (sort === 'same-day') list = [...list].sort((a, b) => Number(b.deliverySpeed === 'Same Day') - Number(a.deliverySpeed === 'Same Day'));
+    return list;
+  }, [catalog, category, query, sort]);
+  const view = catalog.find(item => item.id === viewId) || null;
+  const viewVariant = view?.variants.find(variant => variant.id === selected[view.id]);
+  const viewPrice = viewVariant?.price ?? view?.price ?? 0;
+  const subtotal = cart.reduce((sum, line) => sum + line.price * line.qty, 0);
+  const pieces = cart.reduce((sum, line) => sum + line.qty, 0);
   function persist(next: GiftCartItem[]) { setCart(next); saveGiftCart(next); }
-  function continueShopping() { setCheckout(false); productListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-  function add(item: CatalogItem) { const variant = item.variants.find(v => v.id === selected[item.id]); if (item.variants.length && !variant) return; const sizeLabel = variant?.label; const price = variant?.price ?? item.price; const index = cart.findIndex(line => line.productId === item.id && (line.sizeLabel || '') === (sizeLabel || '')); persist(index >= 0 ? cart.map((line, i) => i === index ? { ...line, qty: Math.min(25, line.qty + 1), price } : line) : [...cart, { productId: item.id, name: item.name, qty: 1, price, sizeLabel, delivery: item.deliverySpeed, image: item.image }]); setDone(''); }
+  function continueShopping() { setCheckout(false); setViewId(''); productListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  function add(item: CatalogItem, count = 1) {
+    const variant = item.variants.find(entry => entry.id === selected[item.id]);
+    if (item.variants.length && !variant) return;
+    const sizeLabel = variant?.label;
+    const price = variant?.price ?? item.price;
+    const index = cart.findIndex(line => line.productId === item.id && (line.sizeLabel || '') === (sizeLabel || ''));
+    persist(index >= 0 ? cart.map((line, i) => i === index ? { ...line, qty: Math.min(25, line.qty + count), price } : line) : [...cart, { productId: item.id, name: item.name, qty: count, price, sizeLabel, delivery: item.deliverySpeed, image: item.image }]);
+    setDone('');
+  }
+  function openGift(item: CatalogItem) {
+    setViewId(item.id);
+    setDetailQty(1);
+    setCheckout(false);
+    if (item.variants.length && !selected[item.id]) setSelected(current => ({ ...current, [item.id]: item.variants[0].id }));
+  }
   function qty(index: number, delta: number) { persist(cart.map((line, i) => i === index ? { ...line, qty: Math.max(1, line.qty + delta) } : line)); }
   function remove(index: number) { persist(cart.filter((_, i) => i !== index)); }
   async function confirm(e: FormEvent) {
@@ -210,14 +244,27 @@ function ExpressGiftsFlow() {
       persist([]);
       setDone(order.model._id);
       setCheckout(false);
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setBusy(false);
     }
   }
 
-  return <><Hero kicker="Express Gifts" title="Send love, same day." text="Choose a gift, add a recipient, and create an order with a personal note."/><section className="section warm"><div className="container flow-layout express-shop"><div ref={productListRef} className="gift-products"><div className="flow-tabs">{categories.map(c => <button key={c} className={category === c ? 'active' : ''} onClick={() => setCategory(c)}>{c}</button>)}</div><div className="flow-grid gift-grid">{filtered.map(item => { const variant = item.variants.find(v => v.id === selected[item.id]); const price = variant?.price ?? item.price; return <article className="flow-card gift-card" key={item.id}>{item.image ? <img src={item.image} alt=""/> : <div className="flow-photo"><Gift/></div>}<div className="gift-card-top"><span>{item.category}</span><b>{item.deliverySpeed}</b></div><h3>{item.name}</h3><p>{money(price)}</p>{item.deliverySpeed === 'Same Day' && <em>Same-day available before 2 PM</em>}<div className="chip-row">{item.variants.map(v => <button className={selected[item.id] === v.id ? 'chip active' : 'chip'} key={v.id} onClick={() => setSelected({ ...selected, [item.id]: v.id })}>{v.label}<small>{v.description || money(v.price)}</small></button>)}</div><button className="button small" disabled={item.variants.length > 0 && !selected[item.id]} onClick={() => add(item)}>{item.variants.length > 0 && !selected[item.id] ? 'Pick a size' : 'Add to cart'}</button></article>; })}</div></div><aside className="flow-cart panel express-cart"><span className="eyebrow">Gift cart</span>{!cart.length ? <div className="empty-gift-cart"><Gift/><h3>Your gift cart is waiting.</h3><button type="button" onClick={continueShopping}>Continue shopping</button></div> : <>{cart.map((line, index) => <div className="cart-line gift-line" key={index}><span>{line.name}<small>{line.sizeLabel || 'Standard'} / {line.delivery}</small><i><button type="button" onClick={() => qty(index, -1)}>-</button>{line.qty}<button type="button" onClick={() => qty(index, 1)}>+</button><button type="button" onClick={() => remove(index)}>Remove</button></i></span><b>{money(line.price * line.qty)}</b></div>)}<h2>{money(subtotal)}</h2><button type="button" className="button full" onClick={() => setCheckout(true)}>Review gift order</button><button type="button" className="ghost-action" onClick={continueShopping}>Continue shopping</button></>}{checkout && cart.length > 0 && <form className="gift-checkout" onSubmit={confirm}><h3>Where should it go?</h3><label>Saved address<select value={addressId} onChange={e => setAddressId(e.target.value)}>{addresses.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}<option value="new">Add new address</option></select></label>{addressId === 'new' && <div className="address-form"><input required placeholder="Address label" value={newAddress.label} onChange={e => setNewAddress({ ...newAddress, label: e.target.value })}/><input required placeholder="Recipient name" value={newAddress.recipient} onChange={e => setNewAddress({ ...newAddress, recipient: e.target.value })}/><input required placeholder="City" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })}/><input required placeholder="Street / landmark" value={newAddress.address} onChange={e => setNewAddress({ ...newAddress, address: e.target.value })}/><input required placeholder="Recipient phone" value={newAddress.phone} onChange={e => setNewAddress({ ...newAddress, phone: e.target.value })}/></div>}<label>Occasion<select value={occasion} onChange={e => setOccasion(e.target.value)}><option value="">Choose occasion</option><option>Surprise gift</option><option>Birthday</option><option>Holiday</option><option>Thank you</option><option>Family support</option><option>Other</option></select></label><textarea value={surpriseNote} onChange={e => setSurpriseNote(e.target.value)} placeholder="Gift note for the recipient, card message, or surprise instructions..."/><textarea value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Gate code, nearest landmark, call on arrival..."/>{error && <p className="error">{error}</p>}<button className="button full" disabled={busy}>{busy ? 'Creating gift order...' : 'Create gift order'}</button><p className="muted-text">No card is taken here. We confirm the order, then send payment instructions.</p></form>}{done && <p className="success">Gift order created. Track it with {done}.</p>}</aside></div></section></>;
+  return <><Hero kicker="Express Gifts" title="Send love, same day." text="Search the shop, choose a size, and check out to a recipient. No card is taken until the order is confirmed."/>
+    <section className="section warm"><div className="container flow-layout express-shop">
+      <div ref={productListRef} className="gift-products">
+        <div className="shop-toolbar">
+          <input aria-label="Search gifts" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search gifts"/>
+          <select aria-label="Sort gifts" value={sort} onChange={e => setSort(e.target.value)}><option value="featured">Featured</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="same-day">Same day first</option></select>
+          <span className="shop-count">{filtered.length} {filtered.length === 1 ? 'gift' : 'gifts'}</span>
+        </div>
+        <div className="flow-tabs">{categories.map(c => <button key={c} className={category === c ? 'active' : ''} onClick={() => setCategory(c)}>{c}</button>)}</div>
+        {view && <article className="gift-detail panel"><button type="button" className="ghost-action" onClick={() => setViewId('')}>Back to gifts</button><div className="gift-detail-grid">{view.image ? <img src={view.image} alt=""/> : <div className="flow-photo"><Gift/></div>}<div><span className="eyebrow">{view.category}</span><h2>{view.name}</h2><p className="gift-price">{money(viewPrice)}</p><p>{viewVariant?.description || view.deliverySpeed}</p>{view.deliverySpeed === 'Same Day' && <em>Same-day available before 2 PM</em>}{view.variants.length > 0 && <div className="chip-row">{view.variants.map(variant => <button type="button" className={selected[view.id] === variant.id ? 'chip active' : 'chip'} key={variant.id} onClick={() => setSelected({ ...selected, [view.id]: variant.id })}>{variant.label}<small>{money(variant.price)}</small></button>)}</div>}<div className="qty-row"><button type="button" aria-label="Decrease quantity" onClick={() => setDetailQty(value => Math.max(1, value - 1))}>-</button><b>{detailQty}</b><button type="button" aria-label="Increase quantity" onClick={() => setDetailQty(value => Math.min(25, value + 1))}>+</button></div><button className="button" disabled={view.variants.length > 0 && !viewVariant} onClick={() => add(view, detailQty)}>{view.variants.length > 0 && !viewVariant ? 'Pick a size' : `Add ${detailQty} to cart`}</button></div></div></article>}
+        {filtered.length === 0 ? <p className="muted-text">No gifts match that search.</p> : <div className="flow-grid gift-grid">{filtered.map(item => { const variant = item.variants.find(entry => entry.id === selected[item.id]); const price = variant?.price ?? giftFloor(item); const inCart = cart.some(line => line.productId === item.id); return <article className="flow-card gift-card" key={item.id}>{item.image ? <img src={item.image} alt=""/> : <div className="flow-photo"><Gift/></div>}<div className="gift-card-top"><span>{item.category}</span><b>{item.deliverySpeed}</b></div><h3>{item.name}</h3><p>{item.variants.length && !variant ? `From ${money(price)}` : money(price)}</p>{item.deliverySpeed === 'Same Day' && <em>Same-day available before 2 PM</em>}{inCart && <small>In cart</small>}<div className="chip-row">{item.variants.map(entry => <button className={selected[item.id] === entry.id ? 'chip active' : 'chip'} key={entry.id} onClick={() => setSelected({ ...selected, [item.id]: entry.id })}>{entry.label}<small>{entry.description || money(entry.price)}</small></button>)}</div><div className="gift-card-actions"><button type="button" className="ghost-action" onClick={() => openGift(item)}>View {item.name}</button><button className="button small" disabled={item.variants.length > 0 && !selected[item.id]} onClick={() => add(item)}>{item.variants.length > 0 && !selected[item.id] ? 'Pick a size' : 'Add to cart'}</button></div></article>; })}</div>}
+      </div>
+      <aside className="flow-cart panel express-cart"><span className="eyebrow">Gift cart</span><h2>{pieces ? `${pieces} in cart` : 'Your cart'}</h2>{!cart.length ? <div className="empty-gift-cart"><Gift/><h3>Your gift cart is waiting.</h3><button type="button" onClick={continueShopping}>Continue shopping</button></div> : <>{cart.map((line, index) => <div className="cart-line gift-line" key={`${line.productId}-${line.sizeLabel || index}`}><span>{line.name}<small>{line.sizeLabel || 'Standard'} / {line.delivery}</small><i><button type="button" aria-label={`Decrease ${line.name}`} onClick={() => qty(index, -1)}>-</button>{line.qty}<button type="button" aria-label={`Increase ${line.name}`} onClick={() => qty(index, 1)}>+</button><button type="button" onClick={() => remove(index)}>Remove</button></i></span><b>{money(line.price * line.qty)}</b></div>)}<div className="quote-math"><span>Subtotal</span><b>{money(subtotal)}</b></div><button type="button" className="button full" onClick={() => { setCheckout(true); setViewId(''); }}>Review gift order</button><button type="button" className="ghost-action" onClick={continueShopping}>Continue shopping</button></>}{checkout && cart.length > 0 && <form className="gift-checkout" onSubmit={confirm}><h3>Where should it go?</h3><ul className="checkout-lines">{cart.map((line, index) => <li key={index}><span>{line.qty} × {line.name}</span><b>{money(line.price * line.qty)}</b></li>)}</ul><label>Saved address<select aria-label="Saved address" value={addressId} onChange={e => setAddressId(e.target.value)}>{addresses.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}<option value="new">Add new address</option></select></label>{addressId === 'new' && <div className="address-form"><input required aria-label="Address label" placeholder="Address label" value={newAddress.label} onChange={e => setNewAddress({ ...newAddress, label: e.target.value })}/><input required aria-label="Recipient name" placeholder="Recipient name" value={newAddress.recipient} onChange={e => setNewAddress({ ...newAddress, recipient: e.target.value })}/><input required aria-label="City" placeholder="City" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })}/><input required aria-label="Street" placeholder="Street / landmark" value={newAddress.address} onChange={e => setNewAddress({ ...newAddress, address: e.target.value })}/><input required aria-label="Recipient phone" placeholder="Recipient phone" value={newAddress.phone} onChange={e => setNewAddress({ ...newAddress, phone: e.target.value })}/></div>}<label>Occasion<select aria-label="Occasion" value={occasion} onChange={e => setOccasion(e.target.value)}><option value="">Choose occasion</option><option>Surprise gift</option><option>Birthday</option><option>Holiday</option><option>Thank you</option><option>Family support</option><option>Other</option></select></label><textarea aria-label="Gift note" value={surpriseNote} onChange={e => setSurpriseNote(e.target.value)} placeholder="Gift note for the recipient, card message, or surprise instructions..."/><textarea aria-label="Delivery note" value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Gate code, nearest landmark, call on arrival..."/>{error && <p className="error">{error}</p>}<button className="button full" disabled={busy}>{busy ? 'Creating gift order...' : 'Create gift order'}</button><p className="muted-text">No card is taken here. We confirm the order, then send payment instructions.</p></form>}{done && <p className="success">Gift order created. Track it with {done}.</p>}</aside>
+    </div></section></>;
 }
 
 function regionForIso(iso: string) {
