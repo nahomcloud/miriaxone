@@ -39,7 +39,8 @@ it('sends a contact reason instead of a blank subject', async () => {
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Where is it?' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
   await screen.findByRole('status');
-  const body = JSON.parse(String(fetchMock.mock.calls[0][1].body));
+  const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+  const body = JSON.parse(String(init.body));
   expect(body.subject).toBe('Tracking HBL-100');
   expect(body.message).toBe('Where is it?');
 });
