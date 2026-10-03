@@ -220,45 +220,101 @@ function ExpressGiftsFlow() {
   return <><Hero kicker="Express Gifts" title="Send love, same day." text="Choose a gift, add a recipient, and create an order with a personal note."/><section className="section warm"><div className="container flow-layout express-shop"><div ref={productListRef} className="gift-products"><div className="flow-tabs">{categories.map(c => <button key={c} className={category === c ? 'active' : ''} onClick={() => setCategory(c)}>{c}</button>)}</div><div className="flow-grid gift-grid">{filtered.map(item => { const variant = item.variants.find(v => v.id === selected[item.id]); const price = variant?.price ?? item.price; return <article className="flow-card gift-card" key={item.id}>{item.image ? <img src={item.image} alt=""/> : <div className="flow-photo"><Gift/></div>}<div className="gift-card-top"><span>{item.category}</span><b>{item.deliverySpeed}</b></div><h3>{item.name}</h3><p>{money(price)}</p>{item.deliverySpeed === 'Same Day' && <em>Same-day available before 2 PM</em>}<div className="chip-row">{item.variants.map(v => <button className={selected[item.id] === v.id ? 'chip active' : 'chip'} key={v.id} onClick={() => setSelected({ ...selected, [item.id]: v.id })}>{v.label}<small>{v.description || money(v.price)}</small></button>)}</div><button className="button small" disabled={item.variants.length > 0 && !selected[item.id]} onClick={() => add(item)}>{item.variants.length > 0 && !selected[item.id] ? 'Pick a size' : 'Add to cart'}</button></article>; })}</div></div><aside className="flow-cart panel express-cart"><span className="eyebrow">Gift cart</span>{!cart.length ? <div className="empty-gift-cart"><Gift/><h3>Your gift cart is waiting.</h3><button type="button" onClick={continueShopping}>Continue shopping</button></div> : <>{cart.map((line, index) => <div className="cart-line gift-line" key={index}><span>{line.name}<small>{line.sizeLabel || 'Standard'} / {line.delivery}</small><i><button type="button" onClick={() => qty(index, -1)}>-</button>{line.qty}<button type="button" onClick={() => qty(index, 1)}>+</button><button type="button" onClick={() => remove(index)}>Remove</button></i></span><b>{money(line.price * line.qty)}</b></div>)}<h2>{money(subtotal)}</h2><button type="button" className="button full" onClick={() => setCheckout(true)}>Review gift order</button><button type="button" className="ghost-action" onClick={continueShopping}>Continue shopping</button></>}{checkout && cart.length > 0 && <form className="gift-checkout" onSubmit={confirm}><h3>Where should it go?</h3><label>Saved address<select value={addressId} onChange={e => setAddressId(e.target.value)}>{addresses.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}<option value="new">Add new address</option></select></label>{addressId === 'new' && <div className="address-form"><input required placeholder="Address label" value={newAddress.label} onChange={e => setNewAddress({ ...newAddress, label: e.target.value })}/><input required placeholder="Recipient name" value={newAddress.recipient} onChange={e => setNewAddress({ ...newAddress, recipient: e.target.value })}/><input required placeholder="City" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })}/><input required placeholder="Street / landmark" value={newAddress.address} onChange={e => setNewAddress({ ...newAddress, address: e.target.value })}/><input required placeholder="Recipient phone" value={newAddress.phone} onChange={e => setNewAddress({ ...newAddress, phone: e.target.value })}/></div>}<label>Occasion<select value={occasion} onChange={e => setOccasion(e.target.value)}><option value="">Choose occasion</option><option>Surprise gift</option><option>Birthday</option><option>Holiday</option><option>Thank you</option><option>Family support</option><option>Other</option></select></label><textarea value={surpriseNote} onChange={e => setSurpriseNote(e.target.value)} placeholder="Gift note for the recipient, card message, or surprise instructions..."/><textarea value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Gate code, nearest landmark, call on arrival..."/>{error && <p className="error">{error}</p>}<button className="button full" disabled={busy}>{busy ? 'Creating gift order...' : 'Create gift order'}</button><p className="muted-text">No card is taken here. We confirm the order, then send payment instructions.</p></form>}{done && <p className="success">Gift order created. Track it with {done}.</p>}</aside></div></section></>;
 }
 
+function regionForIso(iso: string) {
+  if (['ET', 'ER', 'UG', 'KE', 'TZ', 'RW', 'SO', 'DJ'].includes(iso)) return 'East Africa';
+  if (['AE', 'SA', 'QA', 'BH', 'KW', 'OM'].includes(iso)) return 'Middle East';
+  if (['IN', 'PK', 'BD', 'LK'].includes(iso)) return 'South Asia';
+  if (['NG', 'GH', 'SN', 'CI'].includes(iso)) return 'West Africa';
+  if (['US', 'CA', 'MX'].includes(iso)) return 'North America';
+  if (['GB', 'DE', 'FR', 'IT', 'NL', 'ES', 'SE', 'NO'].includes(iso)) return 'Europe';
+  return 'Other';
+}
+
 function CustomCargoFlow() {
+  const steps = ['Size', 'Mode', 'Route', 'Contact'];
   const minDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const [step, setStep] = useState(0);
   const [box, setBox] = useState('lcl');
   const [unit, setUnit] = useState<'m' | 'ft'>('m');
   const [dims, setDims] = useState({ l: 2, w: 1, h: 1 });
   const [weight, setWeight] = useState(250);
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lb'>('kg');
   const [mode, setMode] = useState('Sea LCL');
-  const [region, setRegion] = useState(regions[0].name);
   const [priority, setPriority] = useState('standard');
   const [contact, setContact] = useState({ name: '', email: '', phone: '' });
-  const [route, setRoute] = useState({ origin: '', destination: '' });
-  const [windowName, setWindowName] = useState('Morning');
+  const [goods, setGoods] = useState(cargoTypes[0]);
+  const [notes, setNotes] = useState('');
+  const [readyDate, setReadyDate] = useState('');
+  const [origins, setOrigins] = useState<PlatformCountry[]>([]);
+  const [countries, setCountries] = useState<PlatformCountry[]>([]);
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
+  const [manualRoute, setManualRoute] = useState(false);
+  const [geoError, setGeoError] = useState('');
   const [done, setDone] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    api<{ countries: PlatformCountry[] }>('/site/platform-config').then(config => {
+      if (!live) return;
+      const senders = config.countries.filter(c => c.canSendFrom);
+      const destinations = config.countries.filter(c => c.canDeliverTo);
+      setOrigins(senders);
+      setCountries(destinations);
+      setOrigin(current => current || senders.find(c => c.iso === 'US')?.iso || senders[0]?.iso || '');
+      setDestination(current => current || destinations[0]?.iso || '');
+      setManualRoute(senders.length === 0 || destinations.length === 0);
+      setGeoError('');
+    }).catch(error => {
+      if (!live) return;
+      setManualRoute(true);
+      setGeoError((error as Error).message);
+    });
+    return () => { live = false; };
+  }, []);
+
   const picked = containers.find(c => c.key === box)!;
   const customCbm = unit === 'm' ? dims.l * dims.w * dims.h : dims.l * dims.w * dims.h * 0.0283168;
   const cbm = box === 'custom' ? customCbm : picked.cbm;
   const kg = weightUnit === 'kg' ? weight : weight * 0.453592;
   const airChargeable = Math.max(kg, cbm * 167);
-  const regionMult = regions.find(r => r.name === region)?.multiplier || 1;
-  const priorityMult = priority === 'economy' ? .88 : priority === 'express' ? 1.35 : 1;
+  const regionName = manualRoute ? 'Other' : regionForIso(destination);
+  const regionMult = regions.find(r => r.name === regionName)?.multiplier || 1;
+  const priorityMult = priority === 'express' ? 1.35 : 1;
   const base = (picked.base + (mode.includes('Air') ? airChargeable * 4.8 : cbm * 95)) * regionMult * priorityMult;
+  const originName = origins.find(c => c.iso === origin)?.name || origin;
+  const destinationName = countries.find(c => c.iso === destination)?.name || destination;
+  const routeReady = manualRoute ? origin.trim().length > 1 && destination.trim().length > 1 : Boolean(origin && destination);
+  const contactReady = contact.name.trim().length > 1 && contact.email.includes('@') && contact.phone.trim().length > 5;
+
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const data = new FormData(e.currentTarget);
+    if (!contactReady || !routeReady) return;
     setBusy(true); setSubmitError('');
     try {
       const result = await submitServiceRequest({
         serviceKey: 'custom-cargo', name: contact.name, email: contact.email, phone: contact.phone,
-        origin: route.origin, destination: route.destination, estimate: Number(base.toFixed(2)),
-        summary: `${picked.name}, ${mode}, ${route.origin} to ${route.destination}, ${region}, ${priority}, ${windowName}${data.get('readyDate') ? `, ready ${data.get('readyDate')}` : ''}. ${cbm.toFixed(2)} m3 / ${kg.toFixed(0)} kg. Estimate ${money(base)}. ${String(data.get('description') || '')}`,
+        origin: originName, destination: destinationName, estimate: Number(base.toFixed(2)),
+        summary: `${picked.name}, ${mode}, ${originName} to ${destinationName}, ${regionName}, ${priority}${readyDate ? `, ready ${readyDate}` : ''}. ${goods}. ${cbm.toFixed(2)} m3 / ${kg.toFixed(0)} kg. Estimate ${money(base)}. ${notes}`,
       });
       setDone(result.model._id);
     } catch (err) { setSubmitError((err as Error).message); } finally { setBusy(false); }
   }
 
-  return <><Hero kicker="Custom Cargo" title="Quote anything from LCL to a 40-foot container." text="Five guided sections keep freight quoting clear while the estimate recalculates on every change."/><section className="section"><form className="container custom-flow" onSubmit={submit}><div className="freight-form"><FlowSection n="1" title="Cargo size"><div className="container-options">{containers.map(c => <button type="button" className={box === c.key ? 'active' : ''} key={c.key} onClick={() => setBox(c.key)}>{c.name}<small>{c.key === 'custom' ? 'Enter dimensions' : `${c.cbm} CBM`}</small></button>)}</div>{box === 'custom' && <div className="two"><label>Unit<select value={unit} onChange={e => setUnit(e.target.value as 'm' | 'ft')}><option value="m">Meters</option><option value="ft">Feet</option></select></label><label>Volume<input readOnly value={`${customCbm.toFixed(2)} m3 / ${(customCbm * 35.3147).toFixed(1)} ft3`}/></label><input type="number" min="0" step="any" value={dims.l} onChange={e => setDims({ ...dims, l: Number(e.target.value) })} placeholder="Length"/><input type="number" min="0" step="any" value={dims.w} onChange={e => setDims({ ...dims, w: Number(e.target.value) })} placeholder="Width"/><input type="number" min="0" step="any" value={dims.h} onChange={e => setDims({ ...dims, h: Number(e.target.value) })} placeholder="Height"/></div>}<div className="two"><label>Weight<input type="number" min="1" value={weight} onChange={e => setWeight(Number(e.target.value))}/></label><label>Weight unit<select value={weightUnit} onChange={e => setWeightUnit(e.target.value as 'kg' | 'lb')}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></FlowSection><FlowSection n="2" title="Shipping mode"><select value={mode} onChange={e => setMode(e.target.value)}>{['Sea LCL','Sea FCL','Air freight','Air express'].map(v => <option key={v}>{v}</option>)}</select></FlowSection><FlowSection n="3" title="Route"><div className="two"><input required value={route.origin} onChange={e => setRoute({ ...route, origin: e.target.value })} placeholder="Origin city or port"/><input required value={route.destination} onChange={e => setRoute({ ...route, destination: e.target.value })} placeholder="Destination city or port"/></div><select value={region} onChange={e => setRegion(e.target.value)}>{regions.map(r => <option key={r.name}>{r.name}</option>)}</select></FlowSection><FlowSection n="4" title="Delivery preferences"><div className="two"><label>Preferred date<input type="date" name="readyDate" min={minDate}/></label><label>Priority<select value={priority} onChange={e => setPriority(e.target.value)}><option value="economy">Economy -12%</option><option value="standard">Standard</option><option value="express">Express +35%</option></select></label></div><div className="chip-row">{['Morning','Afternoon','Evening'].map(name => <button type="button" className={windowName === name ? 'chip active' : 'chip'} key={name} onClick={() => setWindowName(name)}>{name}</button>)}</div></FlowSection><FlowSection n="5" title="Contact"><div className="two"><input required value={contact.name} onChange={e => setContact({ ...contact, name: e.target.value })} placeholder="Name"/><input required type="email" value={contact.email} onChange={e => setContact({ ...contact, email: e.target.value })} placeholder="Email"/></div><input required type="tel" value={contact.phone} onChange={e => setContact({ ...contact, phone: e.target.value })} placeholder="Phone"/><textarea name="description" placeholder="Goods description"/><select>{cargoTypes.map(v => <option key={v}>{v}</option>)}</select>{submitError && <p className="error">{submitError}</p>}<button className="button" disabled={busy || !contact.name || !contact.email || !contact.phone || !route.origin || !route.destination}>{busy ? 'Sending quote' : 'Request freight quote'}</button>{done && <p className="success">Quote request {done} is with the team. This estimate is not a charge.</p>}</FlowSection></div><aside className="quote panel quote-sticky"><span className="eyebrow">Live freight quote</span><h2>{money(base)}</h2><div><span>Volume</span><b>{cbm.toFixed(2)} m3</b></div><div><span>Actual weight</span><b>{kg.toFixed(0)} kg</b></div><div><span>Air chargeable</span><b>{airChargeable.toFixed(0)} kg</b></div><div><span>Zone multiplier</span><b>{regionMult.toFixed(2)}x</b></div><hr/><p>This estimate is reviewed by operations before payment collection.</p><CheckCircle2/></aside></form></section></>;
+  return <><Hero kicker="Custom Cargo" title="Quote anything from LCL to a 40-foot container." text="One decision at a time. The number on the side is an estimate, not a charge."/>
+    <section className="section"><form className="container custom-flow" onSubmit={submit}>
+      <div className="freight-form">
+        <ol className="cargo-steps">{steps.map((label, index) => <li key={label} className={index === step ? 'active' : index < step ? 'done' : ''}><button type="button" onClick={() => index < step && setStep(index)}>{index + 1}. {label}</button></li>)}</ol>
+        {step === 0 && <FlowSection n="1" title="How big is it?"><div className="container-options">{containers.map(c => <button type="button" className={box === c.key ? 'active' : ''} key={c.key} onClick={() => setBox(c.key)}>{c.name}<small>{c.key === 'custom' ? 'Enter dimensions' : `${c.cbm} CBM`}</small></button>)}</div>{box === 'custom' && <div className="two"><label>Unit<select value={unit} onChange={e => setUnit(e.target.value as 'm' | 'ft')}><option value="m">Meters</option><option value="ft">Feet</option></select></label><label>Volume<input readOnly value={`${customCbm.toFixed(2)} m3`}/></label><input aria-label="Length" type="number" min="0" step="any" value={dims.l} onChange={e => setDims({ ...dims, l: Number(e.target.value) })} placeholder="Length"/><input aria-label="Width" type="number" min="0" step="any" value={dims.w} onChange={e => setDims({ ...dims, w: Number(e.target.value) })} placeholder="Width"/><input aria-label="Height" type="number" min="0" step="any" value={dims.h} onChange={e => setDims({ ...dims, h: Number(e.target.value) })} placeholder="Height"/></div>}<div className="two"><label>Weight<input aria-label="Weight" type="number" min="1" value={weight} onChange={e => setWeight(Number(e.target.value))}/></label><label>Weight unit<select aria-label="Weight unit" value={weightUnit} onChange={e => setWeightUnit(e.target.value as 'kg' | 'lb')}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></FlowSection>}
+        {step === 1 && <FlowSection n="2" title="How should it move?"><div className="container-options">{['Sea LCL', 'Sea FCL', 'Air freight', 'Air express'].map(v => <button type="button" className={mode === v ? 'active' : ''} key={v} onClick={() => setMode(v)}>{v}<small>{v.startsWith('Air') ? 'Charged on weight or volume' : 'Charged on volume'}</small></button>)}</div><div className="chip-row"><button type="button" className={priority === 'standard' ? 'chip active' : 'chip'} onClick={() => setPriority('standard')}>Standard</button><button type="button" className={priority === 'express' ? 'chip active' : 'chip'} onClick={() => setPriority('express')}>Express</button></div><p className="muted-text">Express is about 35% above the standard estimate. Final price is confirmed before anything is charged.</p></FlowSection>}
+        {step === 2 && <FlowSection n="3" title="Where is it going?"><p className="muted-text">{origins.length ? `Sending from ${origins.map(c => c.name).join(', ')}.` : 'Origin list is unavailable, so enter the city.'} {countries.length ? `Delivering to ${countries.map(c => c.name).join(', ')}.` : ''}</p>{geoError && <p className="error">{geoError}</p>}{manualRoute ? <div className="two"><input required aria-label="Origin" value={origin} onChange={e => setOrigin(e.target.value)} placeholder="Origin city or port"/><input required aria-label="Destination" value={destination} onChange={e => setDestination(e.target.value)} placeholder="Destination city or port"/></div> : <div className="two"><label>From<select aria-label="Origin" value={origin} onChange={e => setOrigin(e.target.value)}>{origins.map(c => <option key={c.iso} value={c.iso}>{c.name}</option>)}</select></label><label>To<select aria-label="Destination" value={destination} onChange={e => setDestination(e.target.value)}>{countries.map(c => <option key={c.iso} value={c.iso}>{c.name}</option>)}</select></label></div>}</FlowSection>}
+        {step === 3 && <FlowSection n="4" title="Who should we call?"><div className="two"><input required aria-label="Name" value={contact.name} onChange={e => setContact({ ...contact, name: e.target.value })} placeholder="Name"/><input required type="email" aria-label="Email" value={contact.email} onChange={e => setContact({ ...contact, email: e.target.value })} placeholder="Email"/></div><input required type="tel" aria-label="Phone" value={contact.phone} onChange={e => setContact({ ...contact, phone: e.target.value })} placeholder="Phone"/><label>Goods<select aria-label="Goods" value={goods} onChange={e => setGoods(e.target.value)}>{cargoTypes.map(v => <option key={v}>{v}</option>)}</select></label><label>Ready date<input aria-label="Ready date" type="date" min={minDate} value={readyDate} onChange={e => setReadyDate(e.target.value)}/></label><textarea aria-label="Notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="What is in the shipment?"/>{submitError && <p className="error">{submitError}</p>}<button className="button" disabled={busy || !contactReady || !routeReady}>{busy ? 'Sending quote' : 'Request freight quote'}</button>{done && <p className="success">Quote request {done} is with the team. This estimate is not a charge.</p>}</FlowSection>}
+        <div className="cargo-nav">{step > 0 && <button type="button" className="ghost-action" onClick={() => setStep(step - 1)}>Back</button>}{step < 3 && <button type="button" className="button" disabled={step === 2 && !routeReady} onClick={() => setStep(step + 1)}>Continue</button>}</div>
+      </div>
+      <aside className="quote panel quote-sticky"><span className="eyebrow">Estimate</span><h2>{money(base)}</h2><div><span>Size</span><b>{picked.name}</b></div><div><span>Volume</span><b>{cbm.toFixed(2)} m3</b></div><div><span>Weight</span><b>{kg.toFixed(0)} kg</b></div>{mode.includes('Air') && <div><span>Air chargeable</span><b>{airChargeable.toFixed(0)} kg</b></div>}<div><span>Route</span><b>{originName && destinationName ? `${originName} to ${destinationName}` : 'Not chosen'}</b></div><hr/><p>Includes the selected mode and a handling estimate. It does not include duties, last-mile surprises, or a confirmed sailing. Nothing is charged until the team confirms the quote.</p></aside>
+    </form></section></>;
 }
 
 function FlowSection({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {

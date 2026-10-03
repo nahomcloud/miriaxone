@@ -17,9 +17,18 @@ it('changes service flow immediately when a service card changes only the query 
   expect(screen.queryByRole('heading',{name:'What are you sending?'})).toBeNull();
 });
 
-it('opens the requested service from the query string on first render',()=>{
+it('walks custom cargo one decision at a time', () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ countries: [
+    { iso: 'US', name: 'United States', canSendFrom: 1 },
+    { iso: 'ET', name: 'Ethiopia', canDeliverTo: 1 },
+  ] }), { status: 200, headers: { 'content-type': 'application/json' } })));
   renderShip('/ship?service=custom-cargo');
-  expect(screen.getByRole('heading',{name:'Quote anything from LCL to a 40-foot container.'})).toBeTruthy();
+  expect(screen.getByRole('heading', { name: /How big is it/ })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: /How should it move/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  expect(screen.getByRole('heading', { name: /How should it move/ })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  expect(screen.getByRole('heading', { name: /Where is it going/ })).toBeTruthy();
 });
 
 
