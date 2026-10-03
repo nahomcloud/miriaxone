@@ -209,3 +209,10 @@ section.warm:has(.express-shop) { background: #ececee; }
 .checkout-steps { display: flex; gap: 14px; list-style: none; padding: 0; margin: 0 0 14px; }
 .checkout-steps button { border: 0; background: transparent; color: #6e6e73; font: 600 12px Satoshi, sans-serif; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; padding: 0; }
 .checkout-steps .active button { color: #111; }
+
+.admin-sidebar .brand,
+.admin-sidebar .brand.light,
+.admin-sidebar .brand span,
+.admin-sidebar .back-site { color: #1d1d1f !important; }
+.admin-sidebar .back-site { display: block; padding: 12px 14px; font-size: 14px; font-weight: 600; }
+.admin-sidebar .back-site:hover { color: #111 !important; }
