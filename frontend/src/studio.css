@@ -127,3 +127,11 @@
   .site-header .nav nav.open a,
   .site-header .nav nav.open button { color: #fff !important; }
 }
+
+body:has(.one-hero) .site-header, body:has(.one-hero) header.site-header { top: 0 !important; }
+body { background: #fff; color: #1d1d1f; }
+.nav-cart { display: inline-flex; align-items: center; gap: 6px; color: #fff !important; letter-spacing: 0; text-transform: none; }
+.nav-cart span { min-width: 18px; height: 18px; border-radius: 999px; background: #fff; color: #111; font-size: 11px; display: grid; place-items: center; font-weight: 700; }
+.footer-line { min-height: 72px; display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
+.site-header ~ footer { padding: 0; }
+.site-header ~ footer .footer-line span, .site-header ~ footer .footer-line a { color: rgba(255,255,255,.78); letter-spacing: .08em; text-transform: uppercase; font-size: 12px; }

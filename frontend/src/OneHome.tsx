@@ -44,6 +44,5 @@ export default function OneHome(){
       </div>
     </section>
 
-    <section className="one-footer-line"><div className="container"><b>MIRIAX ONE</b><span>(c) {new Date().getFullYear()}</span><Link to="/contact">Contact</Link><Link to="/login">Admin</Link></div></section>
   </>;
 }

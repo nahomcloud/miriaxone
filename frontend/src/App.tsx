@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Box, CheckCircle2, Clock3, Gift, Globe2, Headphones, LockKeyhole, Mail, MapPin, Menu, PackageCheck, Search, Truck, X } from 'lucide-react';
+import { ArrowRight, Box, CheckCircle2, Clock3, Gift, Globe2, Headphones, LockKeyhole, Mail, MapPin, Menu, PackageCheck, Search, ShoppingBag, Truck, X } from 'lucide-react';
 import { api, unwrap } from './api';
 import { pageImage } from './pageImages';
 import { RequireAuth, SignOutButton, useAuth } from './auth';
@@ -17,12 +17,24 @@ const services=[
 ];
 const serviceCatalog=[...services];
 
+function cartCount(){
+  const qty=(raw:string|null)=>{try{const rows=JSON.parse(raw||'[]');return Array.isArray(rows)?rows.reduce((sum,row)=>sum+Number(row?.qty||0),0):0}catch{return 0}};
+  return qty(localStorage.getItem('miriax_barrel_cart'))+qty(localStorage.getItem('miriax_cart'));
+}
+function CartLink(){
+  const [count,setCount]=useState(0);
+  useEffect(()=>{const sync=()=>setCount(cartCount());sync();window.addEventListener('miriax-cart',sync);window.addEventListener('storage',sync);return()=>{window.removeEventListener('miriax-cart',sync);window.removeEventListener('storage',sync)}},[]);
+  return <Link to="/ship" className="nav-cart" aria-label={count?`Cart, ${count} items`:'Cart'}><ShoppingBag size={18}/><span>{count}</span></Link>;
+}
+function NotFound(){return <section className="section"><div className="container narrow"><span className="eyebrow">404</span><h1>That page is not here.</h1><p>The link may be old. Start a shipment or track one you already have.</p><div className="actions"><Link className="button" to="/ship">Ship</Link><Link className="text-link" to="/">Home</Link></div></div></section>}
+
+
 function Shell({children}:{children:React.ReactNode}){
   const {user}=useAuth(); const [open,setOpen]=useState(false); const location=useLocation(); const menuButton=useRef<HTMLButtonElement>(null);
   useEffect(()=>{setOpen(false);window.scrollTo(0,0)},[location.pathname]);
   useEffect(()=>{if(!open)return;const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape'){setOpen(false);menuButton.current?.focus()}};document.body.style.overflow='hidden';document.addEventListener('keydown',onKeyDown);return()=>{document.body.style.overflow='';document.removeEventListener('keydown',onKeyDown)}},[open]);
-  return <><header className="site-header"><div className="container nav"><Link to="/" className="brand" aria-label="MIRIAX ONE"><span>MIRIAX</span></Link><button ref={menuButton} className="menu" onClick={()=>setOpen(!open)} aria-label={open?'Close navigation':'Open navigation'} aria-expanded={open} aria-controls="primary-navigation">{open?<X/>:<Menu/>}</button><nav id="primary-navigation" className={open?'open':''}><NavLink to="/ship">Ship</NavLink><NavLink to="/track">Track</NavLink><NavLink to="/contact">Contact</NavLink>{user?.role==='admin'&&<NavLink to="/admin">Admin</NavLink>}{user?<><NavLink to="/account">Account</NavLink><SignOutButton/></>:<NavLink to="/login" className="nav-login">Sign in</NavLink>}<Link to="/ship" className="button small">Start</Link></nav></div></header>
-    <main>{children}</main><footer><div className="container footer-grid"><div><div className="brand light"><span>MIRIAX <span>ONE</span></span></div><p>Clear shipping for families and businesses moving goods across borders.</p></div><div><h4>Company</h4><Link to="/about">About us</Link><Link to="/services">Services</Link><Link to="/contact">Contact</Link></div><div><h4>Get started</h4><Link to="/ship">Create shipment</Link><Link to="/track">Track a package</Link><Link to="/login">Your account</Link></div><div><h4>Contact</h4><Link to="/contact">Contact MIRIAX ONE</Link><p>Available six days a week</p></div></div><div className="copyright">(c) {new Date().getFullYear()} MIRIAX ONE. All rights reserved.</div></footer></>;
+  return <><header className="site-header"><div className="container nav"><Link to="/" className="brand" aria-label="MIRIAX ONE"><span>MIRIAX</span></Link><button ref={menuButton} className="menu" onClick={()=>setOpen(!open)} aria-label={open?'Close navigation':'Open navigation'} aria-expanded={open} aria-controls="primary-navigation">{open?<X/>:<Menu/>}</button><nav id="primary-navigation" className={open?'open':''}><NavLink to="/ship">Ship</NavLink><NavLink to="/track">Track</NavLink><NavLink to="/contact">Contact</NavLink>{user?.role==='admin'&&<NavLink to="/admin">Admin</NavLink>}{user?<NavLink to="/account">Account</NavLink>:<NavLink to="/login" className="nav-login">Sign in</NavLink>}<CartLink/>{user&&<SignOutButton/>}</nav></div></header>
+    <main>{children}</main><footer><div className="container footer-line"><span>MIRIAX ONE</span><Link to="/about">About</Link><Link to="/services">Services</Link><Link to="/contact">Contact</Link><span>(c) {new Date().getFullYear()}</span></div></footer></>;
 }
 
 function Hero(){return <section className="hero"><div className="container hero-content"><span className="eyebrow">Cargo without borders</span><h1>Your world,<br/><em>delivered.</em></h1><p>Simple, secure shipping for everything that matters—from your door to destinations around the globe.</p><div className="actions"><Link className="button" to="/ship">Choose a service <ArrowRight size={18}/></Link><Link className="text-link" to="/track">Track shipment <Search size={17}/></Link></div><div className="proof"><span><CheckCircle2/> Transparent pricing</span><span><CheckCircle2/> End-to-end tracking</span><span><CheckCircle2/> Trusted support</span></div></div></section>}

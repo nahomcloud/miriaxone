@@ -19,7 +19,7 @@ function Snapshot({value}:{value:unknown}) {
 const adminGroups=[
   {label:'Overview',items:['dashboard']},
   {label:'Catalog',items:['item-catalog','page-images','product','container','shipping-type']},
-  {label:'Network',items:['network-service','network-route','country','state','city']},
+  {label:'Network',items:['service','network-route','country','state','city']},
   {label:'Documents & tax',items:['country-document','tax-rate']},
   {label:'Customers',items:['order','contact-us','global-settings']},
 ];
@@ -38,12 +38,34 @@ export default function AdminPanel(){
   const [editor,setEditor]=useState<AdminItem|null|undefined>(undefined),[draft,setDraft]=useState<Record<string,string>>({}),[detail,setDetail]=useState<AdminItem|null>(null);
   const [countries,setCountries]=useState<AdminItem[]>([]),[states,setStates]=useState<AdminItem[]>([]),[methods,setMethods]=useState<AdminItem[]>([]);
   const [lookupError,setLookupError]=useState('');
+  const [stats,setStats]=useState({orders:'—',pending:'—',delivered:'—',revenue:'—'});
   const [trackingStatus,setTrackingStatus]=useState('pending'),[comments,setComments]=useState('');
   const [selected,setSelected]=useState<string[]>([]);
   const firstField=useRef<HTMLInputElement|null>(null);
   const editorBox=useRef<HTMLDivElement|null>(null);
   const requestId=useRef(0);
   const specialSection = section.resource==='item-catalog' || section.resource==='page-images' || section.resource==='dashboard';
+  useEffect(()=>{
+    if(section.resource!=='dashboard')return;
+    let live=true;
+    Promise.all([
+      api<AdminPage>('/admin/order?perPage=1',{auth:true}),
+      api<AdminPage>('/admin/order?perPage=1&status=pending',{auth:true}),
+      api<AdminPage>('/admin/order?perPage=1&status=delivered',{auth:true}),
+      api<AdminPage>('/admin/order?perPage=100&sort=-createdAt',{auth:true}),
+    ]).then(([all,pending,delivered,recent])=>{
+      if(!live)return;
+      const revenue=recent.items.reduce((sum,row)=>sum+(Number(row.price)||0),0);
+      setStats({
+        orders:String(all.totalRecords??all.items.length),
+        pending:String(pending.totalRecords??pending.items.length),
+        delivered:String(delivered.totalRecords??delivered.items.length),
+        revenue:revenue.toLocaleString('en-US',{style:'currency',currency:'USD'}),
+      });
+    }).catch(()=>{if(live)setStats({orders:'—',pending:'—',delivered:'—',revenue:'—'})});
+    return()=>{live=false};
+  },[section.resource]);
+
   const selectedRows=result.items.filter(row=>selected.includes(String(row._id)));
   const allVisibleSelected=result.items.length>0&&result.items.every(row=>selected.includes(String(row._id)));
   const activeCapable=section.active||section.fields.some(field=>field.key==='isActive');
@@ -104,7 +126,7 @@ export default function AdminPanel(){
   function display(row:AdminItem,key:string){const value=row[key];if(key==='value'&&row.type==='private')return row.hasValue?'Configured (hidden)':'Not configured';if(key==='canSendFrom'||key==='canDeliverTo')return <button type="button" className={value===1?'status-toggle on':'status-toggle off'} disabled={busy} onClick={()=>void toggleField(row,key)}>{value===1?'Enabled':'Disabled'}</button>;if(key==='isActive')return <span className={value===0?'status inactive':'status'}>{value===0?'Inactive':'Active'}</span>;if(key==='isPaid')return value===1?'Paid':'Unpaid';if(key==='shippingType')return String(methods.find(m=>m._id===value)?.name||value||'—');if(key==='countryCode')return String(countries.find(c=>c.isoCode===value)?.name||value||'—');if(key==='createdAt')return value?new Date(String(value)).toLocaleDateString():'—';if(key==='price')return Number(value||0).toLocaleString('en-US',{style:'currency',currency:'USD'});if(key==='rate')return `${value??0}%`;return String(value??'—')}
   if(section.resource==='item-catalog')return <section className="admin-shell"><AdminSidebar section={section} busy={busy} navigate={navigate}/><ItemCatalogAdmin/></section>;
   if(section.resource==='page-images')return <section className="admin-shell"><AdminSidebar section={section} busy={busy} navigate={navigate}/><PageImagesAdmin/></section>;
-  if(section.resource==='dashboard')return <section className="admin-shell"><AdminSidebar section={section} busy={busy} navigate={navigate}/><div className="admin-main"><div className="admin-top"><div><span className="eyebrow">Operations overview</span><h1>Dashboard</h1><p>Live KPIs for orders, revenue, pending shipments, and delivered count will appear here as analytics mature.</p></div><SignOutButton/></div><div className="metrics"><div><b>Total orders</b><span>Connected to Orders</span></div><div><b>Revenue</b><span>Current period</span></div><div><b>Pending</b><span>Needs action</span></div><div><b>Delivered</b><span>Completed shipments</span></div></div></div></section>;
+  if(section.resource==='dashboard')return <section className="admin-shell"><AdminSidebar section={section} busy={busy} navigate={navigate}/><div className="admin-main"><div className="admin-top"><div><span className="eyebrow">Operations overview</span><h1>Dashboard</h1><p>Orders, pending work, delivered shipments, and recent revenue.</p></div><SignOutButton/></div><div className="metrics"><div><b>{stats.orders}</b><span>Orders</span></div><div><b>{stats.revenue}</b><span>Recent revenue</span></div><div><b>{stats.pending}</b><span>Pending</span></div><div><b>{stats.delivered}</b><span>Delivered</span></div></div></div></section>;
   return <section className="admin-shell"><AdminSidebar section={section} busy={busy} navigate={navigate}/>
     <div className="admin-main"><div className="admin-top"><div><span className="eyebrow">Operations</span><h1>{section.label}</h1></div><SignOutButton/></div>
       {section.resource==='network-route'&&<p className="admin-notice">Creating the first route enables an allowlist for all bookings: publish every origin, destination, and service you support. Hidden, suspended, and archived routes block new bookings.</p>}{notice&&<p className="admin-notice" role="status">{notice}</p>}{error&&<p className="error" role="alert">{error} <button onClick={()=>setRevision(v=>v+1)}>Retry</button></p>}{lookupError&&<p className="error">Dropdowns unavailable: {lookupError}</p>}

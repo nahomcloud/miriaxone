@@ -40,7 +40,7 @@ const containers = [
 ];
 
 function loadBarrelCart(): CartLine[] { try { return JSON.parse(localStorage.getItem(barrelCartKey) || '[]'); } catch { return []; } }
-function saveBarrelCart(lines: CartLine[]) { localStorage.setItem(barrelCartKey, JSON.stringify(lines)); }
+function saveBarrelCart(lines: CartLine[]) { localStorage.setItem(barrelCartKey, JSON.stringify(lines)); window.dispatchEvent(new Event('miriax-cart')); }
 function itemsFor(service: CatalogItem['service']) { return loadCatalog().filter(item => item.service === service && item.status === 'live'); }
 function linePrice(line: CartLine) { return ((line.variant?.price ?? line.item.price) || 0) * line.qty; }
 function lineWeight(line: CartLine) { return ((line.variant?.weightLb ?? line.item.weightLb) || 0) * line.qty; }
