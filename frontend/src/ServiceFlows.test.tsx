@@ -47,6 +47,14 @@ it('continue shopping scrolls back to the gift products',()=>{
   expect(scrollIntoView).toHaveBeenCalled();
 });
 
+it('closes the open cart once it is empty', () => {
+  localStorage.setItem('miriax_cart', JSON.stringify([{ productId: 'sunflwr', name: 'Sunflower Bunch (10)', qty: 1, price: 40 }]));
+  renderShip('/ship?service=express-gifts&cart=open');
+  expect(document.querySelector('.show-cart')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+  expect(document.querySelector('.show-cart')).toBeNull();
+});
+
 it('creates a gift order without asking for a card',()=>{
   localStorage.setItem('miriax_cart', JSON.stringify([{productId:'sunflwr',name:'Sunflower Bunch (10)',qty:1,price:40,delivery:'Same Day'}]));
   renderShip('/ship?service=express-gifts');

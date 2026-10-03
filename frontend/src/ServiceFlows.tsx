@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Gift, PackageCheck, Truck } from 'lucide-react';
 import { CatalogItem, CatalogVariant, GiftAddress, GiftCartItem, giftServerLine, loadCatalog, loadGiftAddresses, loadGiftCart, money, saveGiftAddresses, saveGiftCart } from './catalog';
 import { api, submitServiceRequest } from './api';
@@ -204,7 +204,19 @@ function ExpressGiftsFlow() {
   const [payPhone, setPayPhone] = useState('');
   const { user } = useAuth();
   const location = useLocation();
-  useEffect(() => { if (!location.search.includes('cart=open')) return; document.getElementById('gift-cart')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); }, [location.search]);
+  const navigate = useNavigate();
+  function closeCartView() {
+    if (!location.search.includes('cart=open')) return;
+    const params = new URLSearchParams(location.search);
+    params.delete('cart');
+    const search = params.toString();
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
+  }
+  useEffect(() => {
+    if (!location.search.includes('cart=open')) return;
+    if (!cart.length) { closeCartView(); return; }
+    document.getElementById('gift-cart')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, [location.search, cart.length]);
   const catalog = itemsFor('express-gifts');
   const categories = ['All', ...Array.from(new Set(catalog.map(item => item.category)))];
   const filtered = useMemo(() => {
@@ -222,7 +234,7 @@ function ExpressGiftsFlow() {
   const subtotal = cart.reduce((sum, line) => sum + line.price * line.qty, 0);
   const pieces = cart.reduce((sum, line) => sum + line.qty, 0);
   function persist(next: GiftCartItem[], name?: string) { setCart(next); saveGiftCart(next, name); }
-  function continueShopping() { setCheckout(false); setViewId(''); productListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  function continueShopping() { setCheckout(false); setViewId(''); closeCartView(); productListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   function add(item: CatalogItem, count = 1) {
     const variant = item.variants.find(entry => entry.id === selected[item.id]);
     if (item.variants.length && !variant) return;

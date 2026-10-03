@@ -55,6 +55,7 @@ function CartLink({ onOpen }: { onOpen: () => void }){
         if(!onShop){setDrawer(true);onOpen();}
         window.setTimeout(()=>setBump(false),480);
       }
+      if(seen.current&&next===0)setDrawer(false);
       seen.current=true; last.current=next; setCount(next);
     };
     sync();
