@@ -216,3 +216,48 @@ section.warm:has(.express-shop) { background: #ececee; }
 .admin-sidebar .back-site { color: #1d1d1f !important; }
 .admin-sidebar .back-site { display: block; padding: 12px 14px; font-size: 14px; font-weight: 600; }
 .admin-sidebar .back-site:hover { color: #111 !important; }
+
+.admin-shell, .section, .panel, .flow-section, .admin-main { font-family: Satoshi, "Avenir Next", "Segoe UI", sans-serif; color: #1d1d1f; }
+.section h1, .section h2, .flow-section h2, .admin-top h1, .panel h2, .panel h3, .admin-panel-head h2, .flow-cart h2, .service h3, .service-choice-card h2 {
+  font-family: Satoshi, sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.04em !important;
+  color: #111 !important;
+}
+.section h1, .section h2, .flow-section h2, .admin-top h1 { font-size: clamp(28px, 4vw, 40px) !important; line-height: 1.1; }
+.panel h2, .panel h3, .admin-panel-head h2, .flow-cart h2, .service h3 { font-size: 22px !important; }
+.service-choice-card h2 { font-size: clamp(28px, 3vw, 36px) !important; }
+.section p, .panel p, .flow-section p, .admin-main p, .lead, .service p, .service-choice-card p { font-size: 16px !important; line-height: 1.5 !important; color: #3a3a3c; }
+.muted-text { color: #6e6e73 !important; font-size: 14px !important; }
+.section .eyebrow, .admin-top .eyebrow, .panel .eyebrow, .flow-cart .eyebrow, .service-choice-card .eyebrow {
+  color: #6e6e73 !important; font-size: 12px !important; letter-spacing: .18em; font-weight: 600 !important;
+}
+.one-barrel .eyebrow, .one-gifts .eyebrow, .one-custom .eyebrow { color: rgba(255,255,255,.72) !important; font-size: 12px !important; letter-spacing: .22em; }
+.one-hero p, .page-hero p, .service-flow-hero p, .one-barrel p, .one-gifts p, .one-custom p { color: rgba(255,255,255,.82) !important; font-size: clamp(16px, 2vw, 18px) !important; }
+.button { background: #111 !important; color: #fff !important; font-size: 14px; min-height: 44px; }
+.button:hover { background: #333 !important; color: #fff !important; }
+.one-hero .button, .one-barrel .button, .one-gifts .button, .one-custom .button, .page-hero .button, .service-flow-hero .button, .ghost-cta.primary, .light-action, .site-header .button.small { background: #fff !important; color: #111 !important; }
+.one-hero .button:hover, .one-barrel .button:hover, .one-gifts .button:hover, .one-custom .button:hover, .page-hero .button:hover, .service-flow-hero .button:hover, .ghost-cta.primary:hover, .light-action:hover, .site-header .button.small:hover { background: #e8e8e8 !important; color: #111 !important; }
+.flow-tabs button, .catalog-tabs button, .country-chips button, .country-tools button, .container-options button, .barrel-size-grid button, .starter-pack-grid button, .chip {
+  font-family: Satoshi, sans-serif !important; font-size: 13px !important; font-weight: 600 !important; color: #1d1d1f !important; background: #fff !important;
+}
+.flow-tabs button.active, .chip.active, .catalog-tabs button.active, .country-chips button.active, .container-options button.active, .barrel-size-grid button.active {
+  background: #111 !important; color: #fff !important; border-color: #111 !important;
+}
+.text-link, .ghost-action, .logout, .card-link, .service-choice-card b { color: #111 !important; font-size: 14px !important; font-weight: 600; }
+.page-hero .text-link, .service-flow-hero .text-link, .one-hero .text-link { color: #fff !important; }
+.form label, .admin-field-grid label, .gift-checkout label { color: #1d1d1f; font-size: 13px; font-weight: 600; }
+.form input, .form select, .form textarea, .mini-form input, .custom-flow input, .custom-flow select, .custom-flow textarea, .admin-main input, .admin-main select, .admin-main textarea { color: #111 !important; font-size: 16px !important; }
+.admin-nav-groups details { border: 1px solid #e5e5e7 !important; background: #fff !important; border-radius: 12px; overflow: hidden; }
+.admin-nav-groups summary { color: #6e6e73 !important; font-size: 12px !important; letter-spacing: .12em; }
+.admin-sidebar button { font-size: 14px !important; font-weight: 500 !important; border-radius: 8px !important; }
+.admin-sidebar button:hover { background: #f5f5f7 !important; color: #111 !important; }
+.admin-sidebar button.active { background: #fff !important; color: #111 !important; box-shadow: inset 3px 0 #111 !important; }
+.admin-table-wrap th { font-size: 12px !important; letter-spacing: .06em; text-transform: uppercase; color: #6e6e73 !important; font-weight: 600; }
+.admin-table-wrap td { color: #1d1d1f; font-size: 14px; }
+.table-action, .admin-pagination button { color: #111 !important; background: #fff !important; border: 1px solid #d2d2d7 !important; font-size: 13px !important; border-radius: 999px; }
+.table-action.danger { color: #9f1239 !important; }
+.gift-card-top span { color: #6e6e73 !important; font-size: 12px !important; }
+.gift-card-top b { background: #f5f5f7 !important; color: #111 !important; font-size: 11px !important; }
+.metrics > a b, .metrics > div b { color: #111; font-size: 28px; }
+.metrics > a span, .metrics > div span { color: #6e6e73; font-size: 13px; }
