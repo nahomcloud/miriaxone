@@ -31,16 +31,11 @@ it('continue shopping scrolls back to the gift products',()=>{
   expect(scrollIntoView).toHaveBeenCalled();
 });
 
-it('requires dummy payment details before creating a gift order',()=>{
+it('creates a gift order without asking for a card',()=>{
   localStorage.setItem('miriax_cart', JSON.stringify([{productId:'sunflwr',name:'Sunflower Bunch (10)',qty:1,price:40,delivery:'Same Day'}]));
   renderShip('/ship?service=express-gifts');
   fireEvent.click(screen.getByRole('button',{name:'Review gift order'}));
-  const createButton = screen.getByRole('button',{name:'Create gift order'}) as HTMLButtonElement;
-  expect(createButton.disabled).toBe(true);
-  fireEvent.change(screen.getByPlaceholderText('Name on card'),{target:{value:'Demo Customer'}});
-  fireEvent.change(screen.getByPlaceholderText('Card number, e.g. 4242 4242 4242 4242'),{target:{value:'4242 4242 4242 4242'}});
-  fireEvent.change(screen.getByPlaceholderText('MM/YY'),{target:{value:'12/30'}});
-  fireEvent.change(screen.getByPlaceholderText('CVC'),{target:{value:'123'}});
+  expect(screen.queryByPlaceholderText('Name on card')).toBeNull();
   expect((screen.getByRole('button',{name:'Create gift order'}) as HTMLButtonElement).disabled).toBe(false);
 });
 

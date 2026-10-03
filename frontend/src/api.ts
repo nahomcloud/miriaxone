@@ -29,3 +29,18 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
 export function unwrap<T>(value: T | { data: T }): T {
   return value && typeof value === 'object' && 'data' in value ? (value as {data:T}).data : value as T;
 }
+
+export async function submitServiceRequest(payload: Record<string, unknown>) {
+  try {
+    return await api<{ model: { _id: string }; message: string }>('/site/service-request', { method: 'POST', auth: true, body: JSON.stringify(payload) });
+  } catch (error) {
+    const message = (error as Error).message.toLowerCase();
+    if (!/not found|404|web page|unavailable/.test(message)) throw error;
+    const contact = await api<{ _id: string }>('/contact-us', { method: 'POST', body: JSON.stringify({
+      name: payload.name, email: payload.email, phone: payload.phone,
+      subject: payload.serviceKey === 'ship-barrel' ? 'Barrel shipment request' : 'Custom cargo quote',
+      message: String(payload.summary || ''),
+    }) });
+    return { model: { _id: contact._id }, message: 'Request received', tracked: false as const };
+  }
+}

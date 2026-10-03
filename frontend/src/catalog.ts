@@ -53,8 +53,26 @@ export function loadGiftCart():GiftCartItem[]{try{return JSON.parse(localStorage
 export function saveGiftCart(items:GiftCartItem[]){localStorage.setItem(giftCartKey,JSON.stringify(items))}
 export function loadGiftOrders():GiftOrder[]{try{return JSON.parse(localStorage.getItem(giftOrdersKey)||'[]')}catch{return []}}
 export function saveGiftOrders(items:GiftOrder[]){localStorage.setItem(giftOrdersKey,JSON.stringify(items))}
-export function loadGiftAddresses():GiftAddress[]{try{const saved=JSON.parse(localStorage.getItem(giftAddressesKey)||'[]');return saved.length?saved:defaultAddresses}catch{return defaultAddresses}}
+export function loadGiftAddresses():GiftAddress[]{try{const saved=JSON.parse(localStorage.getItem(giftAddressesKey)||'[]');return Array.isArray(saved)?saved:[]}catch{return []}}
 export function saveGiftAddresses(items:GiftAddress[]){localStorage.setItem(giftAddressesKey,JSON.stringify(items))}
-const defaultAddresses:GiftAddress[]=[{id:'family-addis',label:'Family Home Addis Ababa',recipient:'Family Home',city:'Addis Ababa',address:'Bole, Addis Ababa',phone:'+251'},{id:'sister-lagos',label:'Sister in Lagos',recipient:'Sister',city:'Lagos',address:'Victoria Island, Lagos',phone:'+234'}];
 export function money(value:number){return value.toLocaleString('en-US',{style:'currency',currency:'USD'})}
+
+/** Size token the live gift API matches. Human labels like "500g" and "8 inch" are rejected. */
+export function giftServerSizeLabel(variantId?: string) {
+  if (!variantId) return '';
+  const split = variantId.indexOf('-');
+  return split === -1 ? variantId : variantId.slice(split + 1);
+}
+
+export function giftServerLine(line: GiftCartItem): GiftCartItem {
+  const item = sample.find(entry => entry.id === line.productId);
+  const variant = item?.variants.find(entry => entry.label === line.sizeLabel || entry.id === line.sizeLabel);
+  return {
+    ...line,
+    name: item?.name || line.name,
+    price: variant?.price ?? item?.price ?? line.price,
+    sizeLabel: variant ? giftServerSizeLabel(variant.id) : (line.sizeLabel || ''),
+    delivery: line.delivery || item?.deliverySpeed,
+  };
+}
 

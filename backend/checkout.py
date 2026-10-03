@@ -25,6 +25,23 @@ GIFT_CATALOG = {
 }
 
 
+def gift_unit_price(product, raw_label: str) -> Decimal:
+    variants = product["variants"]
+    if not raw_label:
+        return Decimal(str(product["price"]))
+    raw = raw_label.strip().lower()
+    compact = raw.replace(" ", "-")
+    aliases = {"500g": "500", "30ml": "30", "100ml": "100", "8-inch": "8", "10-inch": "10", "8inch": "8", "10inch": "10"}
+    wanted = aliases.get(compact, compact)
+    if raw in variants:
+        return Decimal(str(variants[raw]))
+    for key, value in variants.items():
+        suffix = key.split("-", 1)[-1].lower()
+        if wanted in {suffix, key.lower()} or raw in {suffix, key.lower(), suffix.replace("-", " ")}:
+            return Decimal(str(value))
+    raise HTTPException(422, "Selected gift size is no longer available")
+
+
 def install(app, database, optional_user, admin_user):
     @app.post("/site/gift-checkout")
     async def gift_checkout(request: Request, db=Depends(database), user=Depends(optional_user)):
@@ -49,12 +66,8 @@ def install(app, database, optional_user, admin_user):
                 raise HTTPException(422, "Invalid gift quantity")
             if qty <= 0 or qty > 25:
                 raise HTTPException(422, "Gift quantities must be between 1 and 25")
-            variant_label = str(item.get("sizeLabel", "")).strip()
-            variants = product["variants"]
-            price = Decimal(str(product["price"]))
-            if variant_label:
-                variant_key = next((key for key in variants if key.split("-", 1)[-1].lower() == variant_label.lower().replace(" ", "-")), None)
-                price = Decimal(str(variants.get(variant_key, product["price"])))
+            variant_label = str(item.get("variantId") or item.get("sizeLabel") or "").strip()
+            price = gift_unit_price(product, variant_label)
             submitted_price = Decimal(str(item.get("price", -1))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             if submitted_price != price.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP):
                 raise HTTPException(422, "Gift price changed. Refresh the cart and try again")
@@ -75,6 +88,37 @@ def install(app, database, optional_user, admin_user):
             order["email"] = user.get("email", "")
         result = await db.orders.insert_one(order)
         return {"model": {"_id": str(result.inserted_id)}, "total": float(total), "message": "Gift order created; payment pending"}
+
+    @app.post("/site/service-request")
+    async def service_request(request: Request, db=Depends(database), user=Depends(optional_user)):
+        payload = await request.json()
+        if not isinstance(payload, dict):
+            raise HTTPException(422, "Enter the shipment details")
+        service_key = str(payload.get("serviceKey", "")).strip()
+        if service_key not in {"ship-barrel", "custom-cargo"}:
+            raise HTTPException(422, "Choose a barrel or custom cargo request")
+        name = str(payload.get("name", "")).strip()
+        email = str(payload.get("email", "")).strip()
+        phone = str(payload.get("phone", "")).strip()
+        summary = str(payload.get("summary", "")).strip()
+        if not name or not email or "@" not in email or not phone or len(summary) < 8:
+            raise HTTPException(422, "Name, email, phone, and shipment details are required")
+        try:
+            estimate = float(payload.get("estimate", 0))
+        except Exception:
+            raise HTTPException(422, "Estimate must be a number")
+        if not math.isfinite(estimate) or estimate < 0:
+            raise HTTPException(422, "Estimate must be a number")
+        now = datetime.now(timezone.utc)
+        order = {
+            "name": name, "email": email, "phone": phone, "price": round(estimate, 2),
+            "status": "quote-requested", "isPaid": 0, "txnId": "", "createdAt": now, "updatedAt": now, "files": {},
+            "cart": {"formData": {"serviceKey": service_key, "summary": summary[:4000], "origin": str(payload.get("origin", ""))[:80], "destination": str(payload.get("destination", ""))[:80]}, "cartData": {"cartItems": payload.get("items") if isinstance(payload.get("items"), list) else []}, "total": round(estimate, 2)},
+        }
+        if user:
+            order["userId"] = str(user["_id"])
+        result = await db.orders.insert_one(order)
+        return {"model": {"_id": str(result.inserted_id)}, "message": "Request received"}
 
     @app.post("/site/checkout")
     async def checkout(request: Request, db=Depends(database), user=Depends(optional_user)):
